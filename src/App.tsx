@@ -799,81 +799,76 @@ export default function App() {
       className="relative w-screen h-screen bg-[#070b14] text-white flex justify-center items-center overflow-hidden select-none touch-none"
     >
       {/* Mobile Portrait Shell */}
-      <div className="w-full max-w-[420px] h-full flex flex-col items-center justify-between relative bg-[#090e1a] shadow-[0_0_60px_rgba(0,0,0,0.9)] border-x border-slate-800/60 overflow-hidden">
-        {/* 1. START / SPLASH SCREEN */}
+      <div className="w-full h-full max-w-full sm:max-w-[440px] flex flex-col items-center justify-between relative bg-[#090e1a] sm:shadow-[0_0_60px_rgba(0,0,0,0.9)] sm:border-x sm:border-slate-800/60 overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+        {/* 1. START / SPLASH SCREEN (Copy-to-copy match of frames 16.6s & 23.7s) */}
         {gameState === 'splash' && (
-          <div className="absolute inset-0 z-40 bg-gradient-to-b from-slate-950 via-[#0a1128] to-slate-950 flex flex-col items-center justify-between p-6">
-          <div className="w-full flex justify-between items-center max-w-sm">
-            <span className="text-xs font-bold text-sky-400 flex items-center gap-1">
-              <Trophy className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-              Trophies: {playerTrophies}
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowUnityModal(true)}
-                className="text-xs font-bold bg-sky-600/90 hover:bg-sky-500 text-white px-3 py-1.5 rounded-lg border border-sky-400 shadow cursor-pointer transition active:scale-95 flex items-center gap-1"
-              >
-                <FileCode className="w-3.5 h-3.5" />
-                Unity Plan
-              </button>
-              <button
-                onClick={() => setShowTechModal(true)}
-                className="text-xs font-bold bg-indigo-600/80 hover:bg-indigo-500 text-white px-2.5 py-1.5 rounded-lg border border-indigo-400 shadow cursor-pointer transition active:scale-95"
-              >
-                Advice 💡
-              </button>
-            </div>
-          </div>
+          <div
+            onClick={() => startLevel(currentLevelIndex)}
+            className="absolute inset-0 z-50 flex flex-col items-center justify-between p-6 cursor-pointer overflow-hidden select-none"
+            style={{
+              background: 'radial-gradient(circle at 50% 30%, #4338ca 0%, #1e1b4b 30%, #581c87 60%, #b91c1c 85%, #d97706 100%)',
+            }}
+          >
+            {/* Isometric Cubes Pattern Background */}
+            <div className="absolute inset-0 opacity-20 pointer-events-none bg-[radial-gradient(#ffffff_1.5px,transparent_1.5px)] [background-size:20px_20px]" />
 
-          {/* Logo with 3D Voxel Blocks (from video splash screen!) */}
-          <div className="flex flex-col items-center my-auto animate-in zoom-in-95 duration-500">
-            <div className="flex gap-2 mb-4 animate-float">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-rose-500 to-red-600 shadow-xl border-2 border-rose-300 transform -rotate-12 flex items-center justify-center text-xl font-black">
-                🟥
-              </div>
-              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-sky-400 to-blue-600 shadow-xl border-2 border-sky-200 transform rotate-6 flex items-center justify-center text-2xl font-black -translate-y-2">
-                🟦
-              </div>
+            {/* Top Bar with Trophy count */}
+            <div className="w-full flex justify-between items-center z-10">
+              <span className="text-xs font-black text-white/90 bg-black/40 backdrop-blur px-3 py-1 rounded-full border border-white/20 flex items-center gap-1.5">
+                <Trophy className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                Trophies: {playerTrophies}
+              </span>
             </div>
 
-            <h1 className="text-5xl font-black tracking-tight text-white drop-shadow-[0_6px_12px_rgba(0,0,0,0.8)]">
-              COLOR
-            </h1>
-            <h1 className="text-5xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-amber-300 to-rose-500 drop-shadow-[0_6px_12px_rgba(0,0,0,0.8)]">
-              CLASH
-            </h1>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-2">
-              Territory War &amp; Card Arena
-            </p>
+            {/* Central 3D "COLOR CLASH" Logo Image */}
+            <div className="flex flex-col items-center my-auto z-10 animate-in zoom-in-95 duration-700">
+              <div className="relative w-60 h-60 flex items-center justify-center filter drop-shadow-[0_20px_40px_rgba(0,0,0,0.9)] animate-float">
+                <img
+                  src="/logo.png"
+                  alt="Color Clash"
+                  className="w-full h-full object-contain rounded-3xl"
+                />
+              </div>
 
-            {/* Sector select */}
-            <div className="mt-8 flex flex-col gap-3 w-full max-w-xs">
-              <button
-                onClick={() => startLevel(currentLevelIndex)}
-                className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-emerald-400 via-sky-400 to-blue-600 hover:from-emerald-300 hover:to-blue-500 text-slate-950 font-black text-xl tracking-wider shadow-[0_10px_25px_rgba(56,189,248,0.5)] border-2 border-white cursor-pointer transition active:scale-95 flex items-center justify-center gap-2"
-              >
-                <Play className="w-6 h-6 fill-current" />
-                BATTLE NOW
-              </button>
+              {/* Pulsing "TAP TO BATTLE" Prompt */}
+              <div className="mt-4 flex flex-col items-center gap-2">
+                <div className="px-8 py-3.5 rounded-full bg-gradient-to-r from-emerald-400 via-sky-400 to-blue-500 text-slate-950 font-black text-lg tracking-wider shadow-[0_10px_30px_rgba(56,189,248,0.7)] border-2 border-white animate-pulse flex items-center gap-2">
+                  <Play className="w-5 h-5 fill-current" />
+                  TAP TO BATTLE
+                </div>
+                <span className="text-xs font-bold text-white/80">Sector: {currentLevel.name}</span>
+              </div>
+            </div>
 
-              <div className="flex justify-between items-center bg-slate-900/80 p-2 rounded-xl border border-slate-800 text-xs">
-                <span className="font-bold text-slate-400">Sector:</span>
-                <span className="font-black text-sky-400">{currentLevel.name}</span>
-                <button
-                  onClick={() => setCurrentLevelIndex((prev) => (prev + 1) % LEVELS.length)}
-                  className="text-amber-400 hover:underline font-bold"
-                >
-                  Change ➔
-                </button>
+            {/* Bottom Publisher & Studio Branding (Voodoo & Tarboosh Games) */}
+            <div className="w-full flex justify-between items-end z-10 px-2 text-white/80">
+              {/* Voodoo Logo */}
+              <div className="flex flex-col items-start">
+                <span className="text-xl font-black tracking-tighter text-white drop-shadow">
+                  voodoo
+                </span>
+                <span className="text-[8px] font-bold text-white/60 tracking-wider">
+                  INSTANT GAMES
+                </span>
+              </div>
+
+              {/* Tarboosh Games Logo */}
+              <div className="flex items-center gap-1.5">
+                <div className="w-6 h-6 rounded-md bg-red-600 border border-white/80 flex items-center justify-center text-xs shadow">
+                  🛡️
+                </div>
+                <div className="flex flex-col items-start leading-tight">
+                  <span className="text-[10px] font-black tracking-wider text-white">
+                    TARBOOSH
+                  </span>
+                  <span className="text-[8px] font-bold tracking-widest text-white/70">
+                    GAMES
+                  </span>
+                </div>
               </div>
             </div>
           </div>
-
-          <div className="text-center text-[11px] text-slate-500">
-            Recreated with 60 FPS HTML5 Canvas • Inspired by Color Clash
-          </div>
-        </div>
-      )}
+        )}
 
       {/* 2. MATCH TOP HUD */}
       {gameState !== 'splash' && (

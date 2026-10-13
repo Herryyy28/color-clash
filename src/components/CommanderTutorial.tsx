@@ -16,72 +16,66 @@ export const CommanderTutorial: React.FC<CommanderTutorialProps> = ({
   if (closed) return null;
 
   return (
-    <div className="absolute inset-0 pointer-events-none z-30 flex flex-col justify-end pb-28 px-4">
-      {/* Animated Dragging Hand Hint */}
+    <div className="absolute inset-0 pointer-events-none z-40 flex flex-col justify-end pb-32 px-3">
+      {/* Animated Cartoon Gloved Hand Dragging Hint (matching frames 39.5s, 142.1s, 150.0s) */}
       {showHandHint && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="relative animate-bounce">
-            <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm border border-white/60 animate-ping absolute -top-2 -left-2" />
-            <div className="text-4xl filter drop-shadow-lg transform -rotate-12 translate-y-8">
-              👆
-            </div>
+            <svg viewBox="0 0 64 64" className="w-16 h-16 drop-shadow-[0_8px_16px_rgba(0,0,0,0.8)] filter">
+              {/* White Cartoon Glove with Pointing Index Finger */}
+              <path
+                d="M32 10 C32 6, 38 6, 38 10 L38 28 C40 26, 44 26, 44 30 L44 33 C46 31, 50 31, 50 35 L50 38 C52 37, 55 38, 55 42 C55 52, 44 58, 36 58 C26 58, 22 50, 22 42 L22 36 C22 32, 28 32, 28 36 L28 26 C28 22, 32 22, 32 26 Z"
+                fill="#ffffff"
+                stroke="#0f172a"
+                strokeWidth="2.5"
+                strokeLinejoin="round"
+              />
+              {/* Glove fold cuff lines */}
+              <path d="M26 54 L46 54" stroke="#0f172a" strokeWidth="2" strokeLinecap="round" />
+            </svg>
           </div>
         </div>
       )}
 
-      {/* Comic Speech Bubble & Mascot Commander */}
-      <div className="relative flex items-end justify-between gap-2 pointer-events-auto">
-        {/* Speech Bubble */}
+      {/* Mascot Robot & Speech Bubble matching frames 31.6s and 134.2s */}
+      <div className="relative flex items-end justify-end gap-1 pointer-events-auto">
+        {/* Large Rounded Comic Speech Bubble */}
         <div
           onClick={() => {
             setClosed(true);
             onDismiss();
           }}
-          className="flex-1 bg-white text-slate-900 p-3.5 rounded-2xl rounded-br-none shadow-2xl border-2 border-slate-900 cursor-pointer relative animate-in fade-in slide-in-from-bottom-2"
+          className="flex-1 max-w-[260px] bg-white text-slate-900 p-3 rounded-2xl rounded-br-none shadow-[0_12px_28px_rgba(0,0,0,0.7)] border-2 border-slate-900 cursor-pointer relative animate-in fade-in slide-in-from-bottom-3"
         >
-          <div className="font-black text-sm leading-snug tracking-tight">
-            {message.split(' ').map((word, i) => {
-              if (word.includes('RED')) {
-                return <span key={i} className="text-rose-600 font-extrabold">{word} </span>;
-              }
-              if (word.includes('BLUE')) {
-                return <span key={i} className="text-blue-600 font-extrabold">{word} </span>;
-              }
-              if (word.includes('SAW')) {
-                return <span key={i} className="text-amber-500 font-extrabold">{word} </span>;
-              }
-              return <span key={i}>{word} </span>;
-            })}
+          <div className="font-black text-sm leading-snug tracking-tight text-slate-950">
+            {message}
           </div>
-          <div className="flex justify-between items-center mt-2 pt-1 border-t border-slate-200 text-[10px] text-slate-400 font-bold uppercase">
-            <span>Tap to continue</span>
-            <span className="text-blue-600 font-black">Got it! ➔</span>
+          <div className="flex justify-between items-center mt-2 pt-1 border-t border-slate-200 text-[9px] text-slate-400 font-black uppercase">
+            <span>Tap to close</span>
+            <span className="text-[#0284c7]">Got it! ➔</span>
           </div>
 
-          {/* Speech bubble tail pointing to commander */}
-          <div className="absolute -bottom-2 right-4 w-4 h-4 bg-white border-r-2 border-b-2 border-slate-900 transform rotate-45" />
+          {/* Speech bubble pointy tail pointing to Commander's head */}
+          <div className="absolute -bottom-2 right-5 w-4 h-4 bg-white border-r-2 border-b-2 border-slate-900 transform rotate-45" />
         </div>
 
-        {/* Commander Character Icon (Matching the robot with red cannon snout from video) */}
-        <div className="flex flex-col items-center">
-          <div className="w-16 h-16 bg-slate-900 rounded-2xl border-2 border-sky-400 p-1 flex items-center justify-center shadow-2xl relative">
-            {/* Robot Head Artwork */}
-            <div className="relative w-full h-full bg-indigo-950 rounded-xl flex items-center justify-center overflow-hidden">
-              {/* Knight Helmet Visor */}
-              <div className="absolute top-1 inset-x-2 h-4 bg-slate-800 rounded-md border border-slate-600 flex items-center justify-around px-1">
-                <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_6px_#22d3ee]" />
-                <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_6px_#22d3ee]" />
-              </div>
-
-              {/* Red Cannon Snout */}
-              <div className="absolute bottom-1 w-7 h-7 bg-red-600 rounded-full border-2 border-red-400 flex items-center justify-center shadow-inner">
-                <div className="w-3.5 h-3.5 bg-red-950 rounded-full" />
-              </div>
-            </div>
-          </div>
-          <span className="text-[10px] font-black text-sky-400 bg-slate-950 px-1.5 py-0.5 rounded-md mt-0.5 border border-slate-800">
-            COMMANDER
-          </span>
+        {/* Purple/Indigo Robot Commander with prominent Red Cannon Snout */}
+        <div className="relative w-20 h-20 flex-shrink-0 animate-in fade-in zoom-in-95">
+          <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_8px_16px_rgba(0,0,0,0.9)]">
+            {/* Robot Body / Armor */}
+            <path d="M25 70 L75 70 L85 95 L15 95 Z" fill="#4338ca" stroke="#1e1b4b" strokeWidth="2.5" />
+            {/* Dark Knight Visor Helmet */}
+            <ellipse cx="50" cy="45" rx="36" ry="32" fill="#312e81" stroke="#1e1b4b" strokeWidth="3" />
+            {/* Helmet Visor rim */}
+            <path d="M18 42 C18 28, 82 28, 82 42 L84 52 L16 52 Z" fill="#1e1b4b" />
+            {/* Visor Cyan Goggles / Eye Slits */}
+            <rect x="26" y="38" width="16" height="5" rx="2" fill="#22d3ee" className="animate-pulse" />
+            <rect x="58" y="38" width="16" height="5" rx="2" fill="#22d3ee" className="animate-pulse" />
+            {/* Large Red Cylindrical Cannon Snout (Signature element from video) */}
+            <ellipse cx="50" cy="58" rx="16" ry="12" fill="#dc2626" stroke="#991b1b" strokeWidth="2.5" />
+            <ellipse cx="50" cy="58" rx="11" ry="8" fill="#7f1d1d" stroke="#450a0a" strokeWidth="2" />
+            <ellipse cx="50" cy="58" rx="6" ry="4" fill="#1c1917" />
+          </svg>
         </div>
       </div>
     </div>

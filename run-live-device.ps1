@@ -17,6 +17,11 @@ if (Test-Path "capacitor.config.ts") {
     Remove-Item "capacitor.config.ts" -Force
 }
 
+# Clean up any duplicate PNGs in mipmap-anydpi-v26
+if (Test-Path "android\app\src\main\res\mipmap-anydpi-v26") {
+    Remove-Item "android\app\src\main\res\mipmap-anydpi-v26\*.png" -Force -ErrorAction SilentlyContinue
+}
+
 # Ensure capacitor.config.json exists
 if (-not (Test-Path "capacitor.config.json")) {
     Set-Content -Path "capacitor.config.json" -Value '{

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Volume2, VolumeX, Info, Trophy, Timer } from 'lucide-react';
+import { Timer } from 'lucide-react';
 import { LevelConfig } from '../types';
 
 interface HeaderHUDProps {
@@ -10,8 +10,8 @@ interface HeaderHUDProps {
   playerTrophies: number;
   isMuted: boolean;
   onToggleMute: () => void;
-  onOpenTechModal: () => void;
-  onOpenUnityModal: () => void;
+  onOpenTechModal?: () => void;
+  onOpenUnityModal?: () => void;
 }
 
 export const HeaderHUD: React.FC<HeaderHUDProps> = ({
@@ -19,11 +19,8 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
   redPercent,
   timeRemaining,
   currentLevel,
-  playerTrophies,
   isMuted,
   onToggleMute,
-  onOpenTechModal,
-  onOpenUnityModal,
 }) => {
   const formatTime = (secs: number) => {
     const m = Math.floor(secs / 60);
@@ -32,99 +29,97 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
   };
 
   return (
-    <div className="w-full max-w-md mx-auto pt-2 px-3 pb-1 flex flex-col gap-1.5 select-none z-20">
-      {/* Top Players Row */}
-      <div className="flex items-center justify-between gap-2">
+    <div className="w-full px-2 pt-1 pb-1 select-none z-30 flex flex-col items-center">
+      {/* Exact Top Row Layout matching screenshot */}
+      <div className="w-full flex items-center justify-between gap-1.5">
         {/* Blue Player Profile (Left) */}
-        <div className="flex items-center gap-2">
-          <div className="flex flex-col items-center">
-            <div className="relative w-11 h-11 rounded-xl bg-gradient-to-b from-sky-400 to-blue-600 flex items-center justify-center text-xl shadow-lg border-2 border-white">
-              🧢
-              {/* Trophy badge on top right */}
-              <div className="absolute -top-1.5 -right-2 bg-slate-900 border border-amber-400 rounded-full px-1.5 py-0.2 flex items-center gap-0.5 shadow">
-                <Trophy className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />
-                <span className="text-[10px] font-black text-amber-400">{playerTrophies}</span>
-              </div>
+        <div className="flex flex-col items-center">
+          <div className="relative w-12 h-12 rounded-xl bg-gradient-to-b from-[#1e88e5] to-[#1565c0] border-2 border-white shadow-md flex items-center justify-center overflow-hidden">
+            {/* Level Tag on top-left of avatar */}
+            <div className="absolute top-0.5 left-0.5 bg-[#0d47a1] text-white text-[9px] font-black px-1 rounded-sm leading-none border border-blue-300/40">
+              0
             </div>
-            {/* Nameplate */}
-            <span className="bg-blue-600 text-white font-extrabold text-[11px] px-3 py-0.5 rounded-full mt-1 shadow -translate-y-1 border border-blue-400">
-              You
-            </span>
+            {/* Cyan-haired kid avatar with blue cap & headphones */}
+            <svg viewBox="0 0 64 64" className="w-10 h-10 drop-shadow">
+              {/* Headphones */}
+              <path d="M12 28 C12 12, 52 12, 52 28" fill="none" stroke="#374151" strokeWidth="4" />
+              <rect x="8" y="24" width="8" height="14" rx="3" fill="#0284c7" />
+              <rect x="48" y="24" width="8" height="14" rx="3" fill="#0284c7" />
+              {/* Face */}
+              <circle cx="32" cy="32" r="16" fill="#fed7aa" />
+              {/* Cyan hair */}
+              <path d="M18 26 C20 18, 44 18, 46 26 C44 22, 38 20, 32 21 C26 20, 20 22, 18 26 Z" fill="#06b6d4" />
+              {/* Blue backwards cap */}
+              <ellipse cx="32" cy="22" rx="14" ry="7" fill="#2563eb" />
+              <path d="M30 15 L44 14" stroke="#1d4ed8" strokeWidth="3" strokeLinecap="round" />
+              {/* Eyes & Smile */}
+              <circle cx="26" cy="32" r="2" fill="#1e293b" />
+              <circle cx="38" cy="32" r="2" fill="#1e293b" />
+              <path d="M28 38 Q32 41 36 38" fill="none" stroke="#ea580c" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </div>
+          {/* Blue Name Banner */}
+          <div className="bg-[#1976d2] text-white font-black text-[10px] px-3 py-0.5 rounded-full -mt-1.5 shadow border border-blue-300">
+            You
           </div>
         </div>
 
-        {/* Center Percentage & Timer */}
-        <div className="flex-1 flex flex-col items-center justify-center">
-          {/* Territory % Pill on Top (from video 00:31: white pill with 50%) */}
-          <div className="bg-white border-2 border-slate-900 text-blue-600 font-black text-sm px-4 py-0.5 rounded-full shadow-md -mb-1.5 z-10">
+        {/* Center: Dual Progress Bar, Percentage & Timer */}
+        <div className="flex-1 flex flex-col items-center justify-center max-w-[210px]">
+          {/* Territory % Tag centered above bar (e.g. 50% in bright blue) */}
+          <div className="bg-white/95 text-[#0284c7] font-black text-xs px-3 py-0.5 rounded-full shadow-md border border-slate-900 -mb-1.5 z-20">
             {bluePercent}%
           </div>
 
-          {/* Split Territory Bar */}
-          <div className="w-full h-4.5 bg-slate-950 rounded-full p-0.5 border-2 border-slate-900 shadow flex overflow-hidden relative">
+          {/* Split Color Territory Bar */}
+          <div className="w-full h-4 bg-[#0a0f1d] rounded-full p-0.5 border border-white/60 shadow-inner flex overflow-hidden relative">
             <div
-              className="h-full bg-gradient-to-r from-blue-600 to-sky-400 transition-all duration-300 rounded-l-full"
+              className="h-full bg-gradient-to-r from-[#0284c7] to-[#38bdf8] transition-all duration-300 rounded-l-full"
               style={{ width: `${bluePercent}%` }}
             />
-            {/* White divider marker */}
-            <div className="w-1 h-full bg-white shadow z-10 -ml-0.5 -mr-0.5" />
+            {/* Clean white separator line */}
+            <div className="w-0.5 h-full bg-white shadow-sm z-10" />
             <div
-              className="h-full bg-gradient-to-r from-rose-500 to-red-600 transition-all duration-300 rounded-r-full"
+              className="h-full bg-gradient-to-r from-[#f43f5e] to-[#e11d48] transition-all duration-300 rounded-r-full"
               style={{ width: `${redPercent}%` }}
             />
           </div>
 
-          {/* Countdown Clock (Stopwatch from video 00:31: ⏱️ 3:00) */}
-          <div className="flex items-center gap-1 mt-1 bg-slate-900/90 border border-slate-700 px-2.5 py-0.5 rounded-full text-xs font-bold text-white shadow-sm">
-            <Timer className="w-3.5 h-3.5 text-slate-300" />
-            <span className={timeRemaining < 30 ? 'text-rose-400 animate-pulse font-black' : 'font-extrabold'}>
+          {/* Countdown Clock with Stopwatch Icon */}
+          <div className="flex items-center gap-1 mt-1 bg-[#0b1329]/90 border border-slate-700/80 px-2.5 py-0.5 rounded-full text-[11px] font-black text-white shadow">
+            <Timer className="w-3 h-3 text-sky-400" />
+            <span className={timeRemaining < 30 ? 'text-rose-400 animate-pulse' : ''}>
               {formatTime(timeRemaining)}
             </span>
           </div>
         </div>
 
         {/* Red Opponent Profile (Right) */}
-        <div className="flex items-center gap-2">
-          <div className="flex flex-col items-center">
-            <div className="relative w-11 h-11 rounded-xl bg-gradient-to-b from-rose-500 to-red-700 flex items-center justify-center text-xl shadow-lg border-2 border-white">
-              🦎
-              {/* Trophy badge */}
-              <div className="absolute -top-1.5 -left-2 bg-slate-900 border border-amber-400 rounded-full px-1.5 py-0.2 flex items-center gap-0.5 shadow">
-                <Trophy className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />
-                <span className="text-[10px] font-black text-amber-400">{currentLevel.opponentTrophies}</span>
-              </div>
+        <div className="flex flex-col items-center">
+          <div className="relative w-12 h-12 rounded-xl bg-gradient-to-b from-[#e53935] to-[#c62828] border-2 border-white shadow-md flex items-center justify-center overflow-hidden">
+            {/* Level Tag on top-right of avatar */}
+            <div className="absolute top-0.5 right-0.5 bg-[#b71c1c] text-white text-[9px] font-black px-1 rounded-sm leading-none border border-red-300/40">
+              5
             </div>
-            {/* Nameplate */}
-            <span className="bg-rose-600 text-white font-extrabold text-[11px] px-2.5 py-0.5 rounded-full mt-1 shadow -translate-y-1 border border-rose-400 truncate max-w-[80px]">
-              {currentLevel.opponentName}
-            </span>
+            {/* Zombie / Red Trainer Monster avatar */}
+            <svg viewBox="0 0 64 64" className="w-10 h-10 drop-shadow">
+              {/* Red Spiked Helmet */}
+              <path d="M16 26 C16 14, 48 14, 48 26 L52 30 L12 30 Z" fill="#991b1b" />
+              <path d="M32 10 L30 18 L34 18 Z" fill="#facc15" />
+              {/* Face */}
+              <circle cx="32" cy="34" r="15" fill="#86efac" />
+              {/* Eyes */}
+              <circle cx="26" cy="32" r="2.5" fill="#dc2626" />
+              <circle cx="38" cy="32" r="2.5" fill="#dc2626" />
+              {/* Stitch mouth */}
+              <path d="M26 40 L38 40" stroke="#14532d" strokeWidth="2" strokeLinecap="round" />
+              <path d="M29 38 L29 42 M35 38 L35 42" stroke="#14532d" strokeWidth="1.5" />
+            </svg>
           </div>
-        </div>
-      </div>
-
-      {/* Quick Action Tools: Unity 6 Blueprint & Sound */}
-      <div className="flex items-center justify-between px-1 text-[11px]">
-        <button
-          onClick={onOpenUnityModal}
-          className="bg-sky-600/90 hover:bg-sky-500 text-white font-black px-2.5 py-0.5 rounded-lg border border-sky-400 shadow transition active:scale-95 flex items-center gap-1"
-        >
-          <span>Unity Blueprint</span>
-        </button>
-
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={onOpenTechModal}
-            className="bg-indigo-600/80 hover:bg-indigo-500 text-white font-bold px-2 py-0.5 rounded-lg border border-indigo-400 shadow transition active:scale-95 flex items-center gap-1"
-          >
-            <Info className="w-3 h-3" />
-            <span>Tech</span>
-          </button>
-          <button
-            onClick={onToggleMute}
-            className="w-6 h-6 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-300 border border-slate-600 transition"
-          >
-            {isMuted ? <VolumeX className="w-3.5 h-3.5 text-red-400" /> : <Volume2 className="w-3.5 h-3.5 text-sky-400" />}
-          </button>
+          {/* Red Name Banner */}
+          <div className="bg-[#d32f2f] text-white font-black text-[10px] px-2.5 py-0.5 rounded-full -mt-1.5 shadow border border-red-300 truncate max-w-[70px]">
+            Trainer
+          </div>
         </div>
       </div>
     </div>
