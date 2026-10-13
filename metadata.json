@@ -1,0 +1,6 @@
+{
+  "name": "Color Clash - Territory Battle Arena",
+  "description": "Tactical card-battler territory war between Red and Blue. Deploy turrets, buzzsaws, mortars, and spray paint to conquer the arena grid!",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
