@@ -8,12 +8,19 @@ export const ALL_CARDS: Record<string, Card> = {
     description: 'Fires high-velocity paint pellets rapidly at incoming enemy lines.',
     icon: '🔫',
     damage: 28,
-    fireRate: 0.7,
+    fireRate: 0.55,
     range: 12,
     paintRadius: 1.6,
     hp: 160,
     level: 1,
     color: '#00d2ff',
+    passive: {
+      type: 'speed_boost',
+      name: 'Speed Boost',
+      icon: '🪽',
+      description: '+30% Attack cadence & instant response',
+      speedFactor: 1.3,
+    },
   },
   cannon: {
     id: 'cannon',
@@ -28,6 +35,13 @@ export const ALL_CARDS: Record<string, Card> = {
     hp: 240,
     level: 1,
     color: '#3b82f6',
+    passive: {
+      type: 'shielding',
+      name: 'Shielding',
+      icon: '🛡️',
+      description: 'Hardlight energy barrier absorbs 80 damage',
+      shieldValue: 80,
+    },
   },
   saw: {
     id: 'saw',
@@ -42,6 +56,13 @@ export const ALL_CARDS: Record<string, Card> = {
     hp: 1,
     level: 1,
     color: '#f59e0b',
+    passive: {
+      type: 'speed_boost',
+      name: 'Torque Boost',
+      icon: '🪽',
+      description: '+50% Trajectory roll speed',
+      speedFactor: 1.5,
+    },
   },
   mortar: {
     id: 'mortar',
@@ -56,6 +77,13 @@ export const ALL_CARDS: Record<string, Card> = {
     hp: 200,
     level: 1,
     color: '#8b5cf6',
+    passive: {
+      type: 'shielding',
+      name: 'Shielding',
+      icon: '🛡️',
+      description: 'Bunker plating absorbs 60 damage',
+      shieldValue: 60,
+    },
   },
   gatling: {
     id: 'gatling',
@@ -70,6 +98,13 @@ export const ALL_CARDS: Record<string, Card> = {
     hp: 190,
     level: 1,
     color: '#06b6d4',
+    passive: {
+      type: 'rapid_overcharge',
+      name: 'Overcharge',
+      icon: '🔋',
+      description: '+25% Projectile velocity',
+      speedFactor: 1.25,
+    },
   },
   laser: {
     id: 'laser',
@@ -84,6 +119,13 @@ export const ALL_CARDS: Record<string, Card> = {
     hp: 220,
     level: 1,
     color: '#ec4899',
+    passive: {
+      type: 'rapid_overcharge',
+      name: 'Core Beam',
+      icon: '🔋',
+      description: 'Armor-piercing beam charge',
+      speedFactor: 1.2,
+    },
   },
   roller: {
     id: 'roller',
@@ -98,6 +140,13 @@ export const ALL_CARDS: Record<string, Card> = {
     hp: 320,
     level: 1,
     color: '#10b981',
+    passive: {
+      type: 'territory_surge',
+      name: 'Speed Boost',
+      icon: '🪽',
+      description: '+40% Acceleration on friendly ink',
+      speedFactor: 1.4,
+    },
   },
 };
 

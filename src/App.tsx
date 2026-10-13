@@ -87,19 +87,24 @@ export default function App() {
     const initUnits: Unit[] = [];
     if (lvl.initialEnemyUnits) {
       lvl.initialEnemyUnits.forEach((u, i) => {
+        const cardData = ALL_CARDS[u.cardId] || ALL_CARDS.cannon;
         initUnits.push({
           id: `enemy-init-${i}-${Date.now()}`,
           team: 'red',
           cardId: u.cardId,
           x: u.x,
           y: u.y,
-          hp: ALL_CARDS[u.cardId]?.hp ?? 200,
-          maxHp: ALL_CARDS[u.cardId]?.hp ?? 200,
+          hp: cardData.hp,
+          maxHp: cardData.hp,
+          shieldHp: cardData.passive?.shieldValue ?? 0,
+          maxShieldHp: cardData.passive?.shieldValue ?? 0,
+          speedMultiplier: cardData.passive?.speedFactor ?? 1.0,
           level: lvl.level,
           angle: Math.PI / 2, // facing down towards player
           shootCooldown: 1.0,
           barrelRecoil: 0,
           totalShotsFired: 0,
+          passive: cardData.passive,
         });
       });
     }
@@ -226,12 +231,17 @@ export default function App() {
         const newProj: Projectile[] = [];
 
         nextUnits.forEach((unit) => {
-          unit.shootCooldown -= dt;
+          // Speed boost passive: increases attack cooldown decay rate
+          const speedFactor = unit.passive?.type === 'speed_boost' ? (unit.speedMultiplier || 1.3) : 1.0;
+          unit.shootCooldown -= dt * speedFactor;
           unit.barrelRecoil = Math.max(0, unit.barrelRecoil - dt * 4);
 
-          // Mobile Tank Unit locomotion (from keyframe 71.1s)
+          // Mobile Tank Unit locomotion with Territory Surge passive (+40% speed on painted territory)
           if (unit.cardId === 'roller') {
-            const speed = 1.2;
+            const currentTile = gridRef.current[Math.max(0, Math.min(ROWS - 1, Math.floor(unit.y)))]?.[Math.max(0, Math.min(COLS - 1, Math.floor(unit.x)))];
+            const isFriendlyInk = currentTile === unit.team;
+            const surgeMultiplier = isFriendlyInk ? (unit.speedMultiplier || 1.4) : 1.0;
+            const speed = 1.2 * surgeMultiplier;
             unit.y += (unit.team === 'blue' ? -speed : speed) * dt;
             unit.y = Math.max(1, Math.min(ROWS - 2, unit.y));
             splatGrid(unit.x, unit.y, 1.9, unit.team);
@@ -373,7 +383,7 @@ export default function App() {
         return nextUnits;
       });
 
-      // 3. Projectiles physics & collision
+      // 3. Projectiles physics & collision (incorporating Shield absorption)
       setProjectiles((prevProj) => {
         const remaining: Projectile[] = [];
 
@@ -389,18 +399,28 @@ export default function App() {
             // Inking tiles continuously under saw
             splatGrid(p.x, p.y, p.paintRadius, p.team);
 
-            // Damage units hit by saw
+            // Damage units hit by saw (respecting active Shielding)
             setUnits((curUnits) => {
               return curUnits
                 .map((u) => {
                   if (u.team !== p.team && Math.hypot(u.x - p.x, u.y - p.y) < 1.5) {
-                    const dmg = p.damage * dt * 4;
-                    const newHp = u.hp - dmg;
+                    const rawDmg = p.damage * dt * 4;
+                    let remainingDmg = rawDmg;
+                    let curShield = u.shieldHp;
+
+                    // Shield absorbs damage first
+                    if (curShield > 0) {
+                      const absorbed = Math.min(curShield, remainingDmg);
+                      curShield -= absorbed;
+                      remainingDmg -= absorbed;
+                    }
+
+                    const newHp = u.hp - remainingDmg;
                     if (newHp <= 0) {
                       sounds.playExplosion();
                       splatGrid(u.x, u.y, 3, p.team);
                     }
-                    return { ...u, hp: newHp };
+                    return { ...u, hp: newHp, shieldHp: curShield };
                   }
                   return u;
                 })
@@ -426,17 +446,25 @@ export default function App() {
               // Mortar landing impact
               sounds.playExplosion();
               splatGrid(p.targetX, p.targetY, p.paintRadius, p.team);
-              // Splash damage to units
+              // Splash damage to units (respecting Shielding)
               setUnits((curUnits) =>
                 curUnits
                   .map((u) => {
                     if (u.team !== p.team && Math.hypot(u.x - p.targetX, u.y - p.targetY) < p.paintRadius) {
-                      const newHp = u.hp - p.damage;
+                      let remDmg = p.damage;
+                      let sHp = u.shieldHp;
+                      if (sHp > 0) {
+                        const absorbed = Math.min(sHp, remDmg);
+                        sHp -= absorbed;
+                        remDmg -= absorbed;
+                      }
+
+                      const newHp = u.hp - remDmg;
                       if (newHp <= 0) {
                         sounds.playExplosion();
                         splatGrid(u.x, u.y, 2.5, p.team);
                       }
-                      return { ...u, hp: newHp };
+                      return { ...u, hp: newHp, shieldHp: sHp };
                     }
                     return u;
                   })
@@ -446,7 +474,7 @@ export default function App() {
               remaining.push(p);
             }
           } else {
-            // Standard bullets and cannonballs
+            // Standard bullets and cannonballs (respecting Shielding)
             p.x += p.vx * dt;
             p.y += p.vy * dt;
 
@@ -457,14 +485,24 @@ export default function App() {
                 .map((u) => {
                   if (!hitUnit && u.team !== p.team && Math.hypot(u.x - p.x, u.y - p.y) < 1.1) {
                     hitUnit = true;
-                    const newHp = u.hp - p.damage;
+                    let remDmg = p.damage;
+                    let sHp = u.shieldHp;
+
+                    // Shield absorbs damage first
+                    if (sHp > 0) {
+                      const absorbed = Math.min(sHp, remDmg);
+                      sHp -= absorbed;
+                      remDmg -= absorbed;
+                    }
+
+                    const newHp = u.hp - remDmg;
                     sounds.playPaintSplat();
                     splatGrid(p.x, p.y, p.paintRadius, p.team);
                     if (newHp <= 0) {
                       sounds.playExplosion();
                       splatGrid(u.x, u.y, 2.5, p.team);
                     }
-                    return { ...u, hp: newHp };
+                    return { ...u, hp: newHp, shieldHp: sHp };
                   }
                   return u;
                 })
@@ -567,11 +605,15 @@ export default function App() {
                 y: spawnY,
                 hp: cardObj.hp,
                 maxHp: cardObj.hp,
+                shieldHp: cardObj.passive?.shieldValue ?? 0,
+                maxShieldHp: cardObj.passive?.shieldValue ?? 0,
+                speedMultiplier: cardObj.passive?.speedFactor ?? 1.0,
                 level: currentLevel.level,
                 angle: Math.PI / 2,
                 shootCooldown: 0.8,
                 barrelRecoil: 0,
                 totalShotsFired: 0,
+                passive: cardObj.passive,
               },
             ]);
           }
@@ -661,11 +703,15 @@ export default function App() {
           y: gridY,
           hp: card.hp,
           maxHp: card.hp,
+          shieldHp: card.passive?.shieldValue ?? 0,
+          maxShieldHp: card.passive?.shieldValue ?? 0,
+          speedMultiplier: card.passive?.speedFactor ?? 1.0,
           level: card.level,
           angle: -Math.PI / 2, // facing up
           shootCooldown: 0.3, // fire fast initial shot
           barrelRecoil: 0,
           totalShotsFired: 0,
+          passive: card.passive,
         },
       ]);
     }
@@ -750,11 +796,13 @@ export default function App() {
     <div
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
-      className="relative w-screen h-screen bg-[#090d16] text-white flex flex-col items-center justify-between overflow-hidden select-none touch-none"
+      className="relative w-screen h-screen bg-[#070b14] text-white flex justify-center items-center overflow-hidden select-none touch-none"
     >
-      {/* 1. START / SPLASH SCREEN */}
-      {gameState === 'splash' && (
-        <div className="absolute inset-0 z-40 bg-gradient-to-b from-slate-950 via-[#0a1128] to-slate-950 flex flex-col items-center justify-between p-6">
+      {/* Mobile Portrait Shell */}
+      <div className="w-full max-w-[420px] h-full flex flex-col items-center justify-between relative bg-[#090e1a] shadow-[0_0_60px_rgba(0,0,0,0.9)] border-x border-slate-800/60 overflow-hidden">
+        {/* 1. START / SPLASH SCREEN */}
+        {gameState === 'splash' && (
+          <div className="absolute inset-0 z-40 bg-gradient-to-b from-slate-950 via-[#0a1128] to-slate-950 flex flex-col items-center justify-between p-6">
           <div className="w-full flex justify-between items-center max-w-sm">
             <span className="text-xs font-bold text-sky-400 flex items-center gap-1">
               <Trophy className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
@@ -918,6 +966,8 @@ export default function App() {
           </div>
         </div>
       )}
+
+      </div>{/* End Mobile Portrait Shell */}
 
       {/* 7. TECH STACK COMPARISON MODAL */}
       {showTechModal && (

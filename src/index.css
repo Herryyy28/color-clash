@@ -27,3 +27,28 @@
 .animate-float {
   animation: float-gentle 2.5s infinite ease-in-out;
 }
+
+@keyframes ability-pulse {
+  0%, 100% {
+    transform: scale(0.95);
+    opacity: 0.82;
+    filter: drop-shadow(0 0 3px rgba(56, 189, 248, 0.4));
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 1;
+    filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.95));
+  }
+}
+
+.animate-ability-pulse {
+  animation: ability-pulse 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  transform-origin: center center;
+  will-change: transform, opacity, filter;
+}
+
+@utility animate-ability-pulse {
+  animation: ability-pulse 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  transform-origin: center center;
+  will-change: transform, opacity, filter;
+}

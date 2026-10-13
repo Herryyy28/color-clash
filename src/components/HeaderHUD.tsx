@@ -33,96 +33,98 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
 
   return (
     <div className="w-full max-w-md mx-auto pt-2 px-3 pb-1 flex flex-col gap-1.5 select-none z-20">
-      {/* Top Bar with Players & Controls */}
+      {/* Top Players Row */}
       <div className="flex items-center justify-between gap-2">
-        {/* Blue Player Profile */}
-        <div className="flex items-center gap-2 bg-slate-900/80 backdrop-blur px-2.5 py-1.5 rounded-xl border border-sky-500/40 shadow">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center text-lg shadow-inner border border-sky-300">
-            🧢
-          </div>
-          <div className="flex flex-col">
-            <span className="text-xs font-bold text-sky-400 leading-tight">You</span>
-            <div className="flex items-center gap-1 text-[11px] text-amber-400 font-bold leading-none">
-              <Trophy className="w-3 h-3 text-amber-400 fill-amber-400" />
-              <span>{playerTrophies}</span>
+        {/* Blue Player Profile (Left) */}
+        <div className="flex items-center gap-2">
+          <div className="flex flex-col items-center">
+            <div className="relative w-11 h-11 rounded-xl bg-gradient-to-b from-sky-400 to-blue-600 flex items-center justify-center text-xl shadow-lg border-2 border-white">
+              🧢
+              {/* Trophy badge on top right */}
+              <div className="absolute -top-1.5 -right-2 bg-slate-900 border border-amber-400 rounded-full px-1.5 py-0.2 flex items-center gap-0.5 shadow">
+                <Trophy className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />
+                <span className="text-[10px] font-black text-amber-400">{playerTrophies}</span>
+              </div>
             </div>
+            {/* Nameplate */}
+            <span className="bg-blue-600 text-white font-extrabold text-[11px] px-3 py-0.5 rounded-full mt-1 shadow -translate-y-1 border border-blue-400">
+              You
+            </span>
           </div>
         </div>
 
-        {/* Action icons (Unity Plan & Tech Stack Advisor & Sound) */}
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={onOpenUnityModal}
-            title="Unity 6 Android Roadmap & C# Code"
-            className="flex items-center gap-1 bg-sky-600/90 hover:bg-sky-500 text-white text-xs font-bold px-2 py-1.5 rounded-lg border border-sky-400 shadow cursor-pointer transition active:scale-95"
-          >
-            <span>Unity Plan</span>
-          </button>
+        {/* Center Percentage & Timer */}
+        <div className="flex-1 flex flex-col items-center justify-center">
+          {/* Territory % Pill on Top (from video 00:31: white pill with 50%) */}
+          <div className="bg-white border-2 border-slate-900 text-blue-600 font-black text-sm px-4 py-0.5 rounded-full shadow-md -mb-1.5 z-10">
+            {bluePercent}%
+          </div>
 
-          <button
-            onClick={onOpenTechModal}
-            title="Tech Recommendation (Unity vs Godot vs Web)"
-            className="flex items-center gap-1 bg-indigo-600/90 hover:bg-indigo-500 text-white text-xs font-bold px-2 py-1.5 rounded-lg border border-indigo-400 shadow cursor-pointer transition active:scale-95"
-          >
-            <Info className="w-3.5 h-3.5" />
-          </button>
+          {/* Split Territory Bar */}
+          <div className="w-full h-4.5 bg-slate-950 rounded-full p-0.5 border-2 border-slate-900 shadow flex overflow-hidden relative">
+            <div
+              className="h-full bg-gradient-to-r from-blue-600 to-sky-400 transition-all duration-300 rounded-l-full"
+              style={{ width: `${bluePercent}%` }}
+            />
+            {/* White divider marker */}
+            <div className="w-1 h-full bg-white shadow z-10 -ml-0.5 -mr-0.5" />
+            <div
+              className="h-full bg-gradient-to-r from-rose-500 to-red-600 transition-all duration-300 rounded-r-full"
+              style={{ width: `${redPercent}%` }}
+            />
+          </div>
 
-          <button
-            onClick={onToggleMute}
-            title={isMuted ? 'Unmute Sound' : 'Mute Sound'}
-            className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-300 border border-slate-600 cursor-pointer transition active:scale-95"
-          >
-            {isMuted ? <VolumeX className="w-4 h-4 text-red-400" /> : <Volume2 className="w-4 h-4 text-sky-400" />}
-          </button>
+          {/* Countdown Clock (Stopwatch from video 00:31: ⏱️ 3:00) */}
+          <div className="flex items-center gap-1 mt-1 bg-slate-900/90 border border-slate-700 px-2.5 py-0.5 rounded-full text-xs font-bold text-white shadow-sm">
+            <Timer className="w-3.5 h-3.5 text-slate-300" />
+            <span className={timeRemaining < 30 ? 'text-rose-400 animate-pulse font-black' : 'font-extrabold'}>
+              {formatTime(timeRemaining)}
+            </span>
+          </div>
         </div>
 
-        {/* Red Opponent Profile */}
-        <div className="flex items-center gap-2 bg-slate-900/80 backdrop-blur px-2.5 py-1.5 rounded-xl border border-rose-500/40 shadow">
-          <div className="flex flex-col text-right">
-            <span className="text-xs font-bold text-rose-400 leading-tight truncate max-w-[70px]">
+        {/* Red Opponent Profile (Right) */}
+        <div className="flex items-center gap-2">
+          <div className="flex flex-col items-center">
+            <div className="relative w-11 h-11 rounded-xl bg-gradient-to-b from-rose-500 to-red-700 flex items-center justify-center text-xl shadow-lg border-2 border-white">
+              🦎
+              {/* Trophy badge */}
+              <div className="absolute -top-1.5 -left-2 bg-slate-900 border border-amber-400 rounded-full px-1.5 py-0.2 flex items-center gap-0.5 shadow">
+                <Trophy className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />
+                <span className="text-[10px] font-black text-amber-400">{currentLevel.opponentTrophies}</span>
+              </div>
+            </div>
+            {/* Nameplate */}
+            <span className="bg-rose-600 text-white font-extrabold text-[11px] px-2.5 py-0.5 rounded-full mt-1 shadow -translate-y-1 border border-rose-400 truncate max-w-[80px]">
               {currentLevel.opponentName}
             </span>
-            <div className="flex items-center justify-end gap-1 text-[11px] text-amber-400 font-bold leading-none">
-              <Trophy className="w-3 h-3 text-amber-400 fill-amber-400" />
-              <span>{currentLevel.opponentTrophies}</span>
-            </div>
-          </div>
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-rose-500 to-red-700 flex items-center justify-center text-lg shadow-inner border border-rose-400">
-            🤖
           </div>
         </div>
       </div>
 
-      {/* Territory Progress Split Bar & Match Timer (Identical to video layout) */}
-      <div className="relative flex items-center h-8 bg-slate-950 rounded-xl p-0.5 border-2 border-slate-700/80 shadow-lg overflow-hidden">
-        {/* Blue territory fill */}
-        <div
-          className="h-full bg-gradient-to-r from-blue-600 to-sky-500 transition-all duration-300 rounded-l-lg flex items-center pl-2"
-          style={{ width: `${bluePercent}%` }}
-        />
+      {/* Quick Action Tools: Unity 6 Blueprint & Sound */}
+      <div className="flex items-center justify-between px-1 text-[11px]">
+        <button
+          onClick={onOpenUnityModal}
+          className="bg-sky-600/90 hover:bg-sky-500 text-white font-black px-2.5 py-0.5 rounded-lg border border-sky-400 shadow transition active:scale-95 flex items-center gap-1"
+        >
+          <span>Unity Blueprint</span>
+        </button>
 
-        {/* Red territory fill */}
-        <div
-          className="h-full bg-gradient-to-r from-rose-500 to-red-600 transition-all duration-300 rounded-r-lg flex items-center justify-end pr-2"
-          style={{ width: `${redPercent}%` }}
-        />
-
-        {/* Center Percentage Display and Timer */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="flex items-center gap-2.5 bg-slate-900/90 border border-slate-600 px-3 py-0.5 rounded-full shadow-md">
-            <span className="text-xs font-black text-sky-400 tracking-wider">
-              {bluePercent}%
-            </span>
-            <div className="flex items-center gap-1 text-slate-300 text-xs font-bold">
-              <Timer className="w-3 h-3 text-amber-400" />
-              <span className={timeRemaining < 30 ? 'text-rose-400 animate-pulse' : 'text-white'}>
-                {formatTime(timeRemaining)}
-              </span>
-            </div>
-            <span className="text-xs font-black text-rose-400 tracking-wider">
-              {redPercent}%
-            </span>
-          </div>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={onOpenTechModal}
+            className="bg-indigo-600/80 hover:bg-indigo-500 text-white font-bold px-2 py-0.5 rounded-lg border border-indigo-400 shadow transition active:scale-95 flex items-center gap-1"
+          >
+            <Info className="w-3 h-3" />
+            <span>Tech</span>
+          </button>
+          <button
+            onClick={onToggleMute}
+            className="w-6 h-6 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-300 border border-slate-600 transition"
+          >
+            {isMuted ? <VolumeX className="w-3.5 h-3.5 text-red-400" /> : <Volume2 className="w-3.5 h-3.5 text-sky-400" />}
+          </button>
         </div>
       </div>
     </div>

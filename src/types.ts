@@ -12,6 +12,17 @@ export interface Tile {
 
 export type CardType = 'blaster' | 'cannon' | 'saw' | 'mortar' | 'gatling' | 'laser' | 'roller';
 
+export type PassiveAbilityType = 'speed_boost' | 'shielding' | 'rapid_overcharge' | 'territory_surge';
+
+export interface PassiveAbility {
+  type: PassiveAbilityType;
+  name: string;
+  icon: string;
+  description: string;
+  shieldValue?: number; // for shielding structures
+  speedFactor?: number; // for speed boost
+}
+
 export interface Card {
   id: CardType;
   name: string;
@@ -25,6 +36,7 @@ export interface Card {
   hp: number;
   level: number;
   color: string;
+  passive?: PassiveAbility;
 }
 
 export interface Unit {
@@ -35,11 +47,16 @@ export interface Unit {
   y: number; // grid coordinate Y
   hp: number;
   maxHp: number;
+  shieldHp: number;
+  maxShieldHp: number;
+  speedMultiplier: number;
   level: number;
   angle: number; // radians
   shootCooldown: number;
   barrelRecoil: number; // 0 to 1 for visual kickback
   totalShotsFired: number;
+  passive?: PassiveAbility;
+  shieldFlashTimer?: number;
 }
 
 export interface Projectile {

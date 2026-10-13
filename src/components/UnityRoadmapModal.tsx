@@ -46,8 +46,8 @@ using UnityEngine;
 
 namespace ColorClash.Gameplay.Cards
 {
-    public enum UnitArchetype { Blaster, Cannon, BuzzSaw, Mortar, Gatling, Laser }
-    public enum TargetPreference { Ground, UnitsOnly, Any }
+    public enum UnitArchetype { Blaster, Cannon, BuzzSaw, Mortar, Gatling, Laser, PaintTank }
+    public enum PassiveAbilityType { None, SpeedBoost, Shielding, TerritorySurge, RapidOvercharge }
 
     [CreateAssetMenu(fileName = "NewCard", menuName = "ColorClash/Card Data")]
     public class CardData : ScriptableObject
@@ -66,6 +66,11 @@ namespace ColorClash.Gameplay.Cards
         public float attackRange = 12f;
         public float fireRate = 1.0f; // Seconds between attacks
         public float paintRadius = 2.5f; // Territory splash radius in tiles
+
+        [Header("Passive Ability")]
+        public PassiveAbilityType passiveType = PassiveAbilityType.None;
+        public float passiveShieldValue = 0f; // Absorb damage (e.g. Cannon 80f)
+        public float passiveSpeedFactor = 1.0f; // Speed boost (e.g. Blaster 1.3f)
 
         [Header("Visual Prefabs")]
         public GameObject unitPrefab;

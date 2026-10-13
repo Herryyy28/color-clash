@@ -39,12 +39,23 @@ export const CommanderTutorial: React.FC<CommanderTutorialProps> = ({
           }}
           className="flex-1 bg-white text-slate-900 p-3.5 rounded-2xl rounded-br-none shadow-2xl border-2 border-slate-900 cursor-pointer relative animate-in fade-in slide-in-from-bottom-2"
         >
-          <p className="font-extrabold text-sm leading-snug">
-            {message}
-          </p>
-          <div className="flex justify-between items-center mt-1.5 pt-1 border-t border-slate-200 text-[10px] text-slate-500 font-bold uppercase">
+          <div className="font-black text-sm leading-snug tracking-tight">
+            {message.split(' ').map((word, i) => {
+              if (word.includes('RED')) {
+                return <span key={i} className="text-rose-600 font-extrabold">{word} </span>;
+              }
+              if (word.includes('BLUE')) {
+                return <span key={i} className="text-blue-600 font-extrabold">{word} </span>;
+              }
+              if (word.includes('SAW')) {
+                return <span key={i} className="text-amber-500 font-extrabold">{word} </span>;
+              }
+              return <span key={i}>{word} </span>;
+            })}
+          </div>
+          <div className="flex justify-between items-center mt-2 pt-1 border-t border-slate-200 text-[10px] text-slate-400 font-bold uppercase">
             <span>Tap to continue</span>
-            <span className="text-sky-600">Got it! ➔</span>
+            <span className="text-blue-600 font-black">Got it! ➔</span>
           </div>
 
           {/* Speech bubble tail pointing to commander */}

@@ -331,6 +331,36 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
         ctx.restore(); // restore angle rotation
 
+        // Render Shield Bubble if unit has active Shielding passive
+        if (unit.shieldHp > 0) {
+          const pulse = Math.sin(Date.now() / 180) * 0.12 + 0.88;
+          ctx.beginPath();
+          ctx.arc(0, 0, cellW * 0.72 * pulse, 0, Math.PI * 2);
+          ctx.fillStyle = isBlue ? 'rgba(56, 189, 248, 0.18)' : 'rgba(251, 113, 133, 0.18)';
+          ctx.fill();
+          ctx.strokeStyle = isBlue ? '#38bdf8' : '#fb7185';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([5, 3]);
+          ctx.lineDashOffset = -(Date.now() / 30) % 8;
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        // Render Speed Boost wind streaks if unit has Speed Boost / Surge passive
+        if (unit.passive?.type === 'speed_boost' || unit.passive?.type === 'territory_surge') {
+          ctx.save();
+          ctx.strokeStyle = 'rgba(250, 204, 21, 0.7)';
+          ctx.lineWidth = 1.6;
+          const streakOffset = (Date.now() / 35) % (cellH * 0.6);
+          ctx.beginPath();
+          ctx.moveTo(-cellW * 0.38, cellH * 0.4 - streakOffset);
+          ctx.lineTo(-cellW * 0.38, cellH * 0.7 - streakOffset);
+          ctx.moveTo(cellW * 0.38, cellH * 0.4 - streakOffset);
+          ctx.lineTo(cellW * 0.38, cellH * 0.7 - streakOffset);
+          ctx.stroke();
+          ctx.restore();
+        }
+
         // Level Pill Badge (just like in video: "Lvl. 1" or "Lvl. 3" white pill!)
         const badgeY = -cellH * 0.85;
         ctx.fillStyle = '#ffffff';
@@ -347,12 +377,85 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         ctx.textBaseline = 'middle';
         ctx.fillText(`Lvl.${unit.level}`, 0, badgeY + cellH * 0.21);
 
-        // HP Bar under unit
+        // Passive Ability Icon Badge (e.g. 🛡️ Shield, ⚡ Speed Boost, 💨 Surge)
+        if (unit.passive) {
+          const pBadgeX = cellW * 0.65;
+          ctx.fillStyle = '#0f172a';
+          ctx.beginPath();
+          ctx.arc(pBadgeX, badgeY + cellH * 0.21, cellH * 0.24, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = unit.shieldHp > 0 ? '#38bdf8' : '#f59e0b';
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+
+          ctx.font = `${Math.max(9, Math.floor(cellH * 0.26))}px sans-serif`;
+          ctx.fillText(unit.passive.icon, pBadgeX, badgeY + cellH * 0.23);
+        }
+
+        // HP & Shield Bars under unit
         const hpPercent = Math.max(0, unit.hp / unit.maxHp);
         const hpBarW = cellW * 1.1;
         const hpBarH = 3.5;
-        const hpBarY = cellH * 0.75;
+        const hpBarY = cellH * 0.78;
 
+        // Passive Ability Dynamic Icon directly above the Health Bar (with grow/shrink pulse)
+        if (unit.passive) {
+          const isShieldActive = unit.shieldHp > 0;
+          const isSpeedActive = unit.passive.type === 'speed_boost' || unit.passive.type === 'territory_surge';
+          const isOvercharge = unit.passive.type === 'rapid_overcharge';
+
+          if (isShieldActive || isSpeedActive || isOvercharge) {
+            // Exact icons specified by user: shield 🛡️ for shielding, wing 🪽 for speed boost
+            const icon = isShieldActive ? '🛡️' : isSpeedActive ? '🪽' : '🔋';
+            const subtext = isShieldActive ? `${Math.round(unit.shieldHp)}` : 'SPEED';
+            const auraColor = isShieldActive ? '#38bdf8' : isSpeedActive ? '#facc15' : '#c084fc';
+            const auraBg = isShieldActive ? 'rgba(7, 39, 63, 0.95)' : isSpeedActive ? 'rgba(66, 32, 6, 0.95)' : 'rgba(59, 7, 100, 0.95)';
+
+            // Dynamic grow & shrink scale matching 'animate-ability-pulse'
+            const pulseScale = 1.0 + Math.sin(Date.now() / 190) * 0.16;
+            const badgeY = hpBarY - (isShieldActive ? 13 : 9.5);
+
+            ctx.save();
+            ctx.translate(0, badgeY);
+            ctx.scale(pulseScale, pulseScale);
+
+            // Glowing halo drop shadow
+            ctx.shadowColor = auraColor;
+            ctx.shadowBlur = 9;
+
+            // Medallion pill badge directly over health bar
+            const pillW = cellW * 0.92;
+            const pillH = 9;
+            ctx.fillStyle = auraBg;
+            ctx.beginPath();
+            ctx.roundRect(-pillW / 2, -pillH / 2, pillW, pillH, 4.5);
+            ctx.fill();
+            ctx.strokeStyle = auraColor;
+            ctx.lineWidth = 1.3;
+            ctx.stroke();
+
+            // Render shield or wing icon + stat text
+            ctx.font = `bold ${Math.max(7.5, Math.floor(cellH * 0.23))}px Fredoka, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = auraColor;
+            ctx.fillText(`${icon} ${subtext}`, 0, 0.5);
+
+            ctx.restore();
+          }
+        }
+
+        // Slim Shield Bar (Cyan) if shielding structure
+        if (unit.maxShieldHp > 0 && unit.shieldHp > 0) {
+          const shieldPercent = Math.max(0, Math.min(1, unit.shieldHp / unit.maxShieldHp));
+          const shieldBarY = hpBarY - 4.5;
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+          ctx.fillRect(-hpBarW / 2, shieldBarY, hpBarW, 2.5);
+          ctx.fillStyle = '#38bdf8';
+          ctx.fillRect(-hpBarW / 2, shieldBarY, hpBarW * shieldPercent, 2.5);
+        }
+
+        // Main Health Bar (Green for Blue, Red for Red)
         ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
         ctx.fillRect(-hpBarW / 2, hpBarY, hpBarW, hpBarH);
         ctx.fillStyle = isBlue ? '#22c55e' : '#ef4444';
@@ -570,13 +673,57 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
   return (
     <div className="relative w-full h-full flex items-center justify-center p-1">
-      <canvas
-        ref={canvasRef}
-        width={420}
-        height={630}
-        onPointerUp={handlePointerUp}
-        className="max-h-[72vh] aspect-[2/3] touch-none rounded-xl bg-slate-900 border border-slate-700/60 shadow-2xl"
-      />
+      <div className="relative max-h-[72vh] aspect-[2/3] flex items-center justify-center">
+        <canvas
+          ref={canvasRef}
+          width={420}
+          height={630}
+          onPointerUp={handlePointerUp}
+          className="w-full h-full touch-none rounded-xl bg-slate-900 border border-slate-700/60 shadow-2xl"
+        />
+
+        {/* Floating Unit Active Passive Indicator Badges using .animate-ability-pulse */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          {units.map((unit) => {
+            if (!unit.passive) return null;
+            const isShield = unit.shieldHp > 0;
+            const isSpeed = unit.passive.type === 'speed_boost' || unit.passive.type === 'territory_surge';
+            const isOvercharge = unit.passive.type === 'rapid_overcharge';
+            if (!isShield && !isSpeed && !isOvercharge) return null;
+
+            // Relative grid percentage placement
+            const paddingXPercent = 4;
+            const paddingYPercent = 2;
+            const arenaWPercent = 92;
+            const arenaHPercent = 96;
+            const leftPercent = paddingXPercent + ((unit.x + 0.5) / COLS) * arenaWPercent;
+            const topPercent = paddingYPercent + ((unit.y + 0.5) / ROWS) * arenaHPercent;
+
+            const icon = isShield ? '🛡️' : isSpeed ? '🪽' : '🔋';
+            const label = isShield ? `${Math.round(unit.shieldHp)}` : 'SPEED';
+            const badgeBorder = isShield ? 'border-sky-400 text-sky-300' : isSpeed ? 'border-amber-400 text-amber-300' : 'border-purple-400 text-purple-300';
+            const badgeBg = isShield ? 'bg-sky-950/90' : isSpeed ? 'bg-amber-950/90' : 'bg-purple-950/90';
+
+            return (
+              <div
+                key={`badge-${unit.id}`}
+                className="absolute transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center"
+                style={{
+                  left: `${leftPercent}%`,
+                  top: `${topPercent - 4}%`,
+                }}
+              >
+                <div
+                  className={`animate-ability-pulse ${badgeBg} ${badgeBorder} border rounded-full px-2 py-0.5 flex items-center gap-1 shadow-lg text-[10px] font-black tracking-tight select-none`}
+                >
+                  <span className="text-xs inline-block animate-ability-pulse">{icon}</span>
+                  <span>{label}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 };

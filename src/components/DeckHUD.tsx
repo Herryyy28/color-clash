@@ -137,33 +137,43 @@ export const DeckHUD: React.FC<DeckHUDProps> = ({
               <div
                 key={`${card.id}-${index}`}
                 onPointerDown={(e) => handleCardPointerDown(card, e)}
-                className={`relative flex-1 max-w-[76px] h-24 rounded-xl flex flex-col items-center justify-between p-1.5 transition-all cursor-pointer border-2 shadow-lg touch-none select-none ${
+                className={`relative flex-1 max-w-[78px] h-25 rounded-xl flex flex-col items-center justify-between p-1 transition-all cursor-pointer border-2 shadow-xl touch-none select-none ${
                   isSelected
-                    ? 'scale-105 border-sky-300 ring-2 ring-sky-400 bg-sky-950/80 -translate-y-2'
+                    ? 'scale-105 border-white ring-4 ring-sky-400 bg-gradient-to-b from-sky-800 to-blue-950 -translate-y-2.5'
                     : canAfford
-                    ? 'border-slate-600 hover:border-sky-400 bg-gradient-to-b from-slate-800 to-slate-900 active:scale-95'
-                    : 'border-slate-800 bg-slate-950/70 opacity-60 grayscale cursor-not-allowed'
+                    ? 'border-slate-500 hover:border-sky-300 bg-gradient-to-b from-slate-700 via-slate-800 to-slate-900 active:scale-95'
+                    : 'border-slate-800 bg-slate-950/85 opacity-55 grayscale cursor-not-allowed'
                 }`}
               >
-                {/* Card Icon and Name */}
-                <div className="flex flex-col items-center w-full">
-                  <div className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center text-2xl shadow-inner border border-slate-700">
-                    {card.icon}
+                {/* Passive Ability Pill Badge */}
+                {card.passive && (
+                  <div
+                    title={`${card.passive.name}: ${card.passive.description}`}
+                    className="absolute -top-1.5 -right-1.5 bg-slate-900 border border-amber-400/90 rounded-full w-5.5 h-5.5 flex items-center justify-center text-xs shadow-md z-10 animate-ability-pulse"
+                  >
+                    {card.passive.icon}
                   </div>
-                  <span className="text-[10px] font-bold text-slate-200 mt-1 truncate max-w-full text-center">
+                )}
+
+                {/* Card Artwork Box */}
+                <div className="w-full flex-1 rounded-lg bg-gradient-to-b from-slate-800/80 to-slate-900/90 border border-slate-700/60 flex flex-col items-center justify-center p-0.5 overflow-hidden shadow-inner relative">
+                  <span className="text-2xl filter drop-shadow transform hover:scale-110 transition">
+                    {card.icon}
+                  </span>
+                  <span className="text-[10px] font-black text-slate-200 truncate max-w-full text-center leading-none mt-0.5">
                     {card.name}
                   </span>
                 </div>
 
-                {/* Energy Cost Hexagon/Badge */}
+                {/* Reference-accurate Energy Cost Badge at bottom center */}
                 <div
-                  className={`flex items-center justify-center font-black text-xs px-2 py-0.5 rounded-full shadow border ${
+                  className={`flex items-center justify-center font-black text-[11px] px-2.5 py-0.5 rounded-full shadow-md border -mb-1 z-10 ${
                     canAfford
                       ? 'bg-gradient-to-r from-emerald-400 to-green-500 text-slate-950 border-white'
-                      : 'bg-slate-700 text-slate-400 border-slate-600'
+                      : 'bg-slate-800 text-slate-400 border-slate-600'
                   }`}
                 >
-                  <Zap className="w-3 h-3 fill-current inline mr-0.5" />
+                  <Zap className="w-2.5 h-2.5 fill-current inline mr-0.5" />
                   {card.cost}
                 </div>
               </div>
