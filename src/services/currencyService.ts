@@ -85,8 +85,33 @@ class CurrencyService {
   // -------------------------------------------------------------
   // Persistence & Initialization
   // -------------------------------------------------------------
+  private getDefaultWalletState(): WalletState {
+    return {
+      coins: 650,
+      gems: 95,
+      totalCoinsEarned: 650,
+      totalCoinsSpent: 0,
+      totalGemsEarned: 95,
+      totalGemsSpent: 0,
+      lastSyncedAt: Date.now(),
+      dailyStreak: {
+        currentStreak: 0,
+        lastClaimDate: null,
+        lastClaimTimestamp: null,
+        claimedDays: [],
+      },
+      transactions: [],
+      pendingRewards: {},
+      processedClaimIds: [],
+      adWatchHistory: {},
+    };
+  }
+
   private loadFromStorage(): WalletState {
     try {
+      if (typeof localStorage === 'undefined') {
+        return this.getDefaultWalletState();
+      }
       const raw = localStorage.getItem(WALLET_STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
@@ -185,6 +210,7 @@ class CurrencyService {
 
   private saveToStorage() {
     try {
+      if (typeof localStorage === 'undefined') return;
       this.state.lastSyncedAt = Date.now();
       localStorage.setItem(WALLET_STORAGE_KEY, JSON.stringify(this.state));
 

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { X, History, ArrowDownLeft, ArrowUpRight, ShieldCheck, Download, Trash2, Clock } from 'lucide-react';
+import { History, ArrowDownLeft, ArrowUpRight, ShieldCheck, Download } from 'lucide-react';
 import { currencyService, WalletTransaction } from '../services/currencyService';
 import { sounds } from '../audio';
+import { ResponsiveModal } from './ResponsiveModal';
 
 interface TransactionLedgerModalProps {
   isOpen: boolean;
@@ -36,31 +37,14 @@ export const TransactionLedgerModal: React.FC<TransactionLedgerModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#071940]/85 backdrop-blur-md flex items-center justify-center p-3 select-none">
-      <div className="relative w-full max-w-md rounded-3xl bg-gradient-to-b from-[#1b50ba] via-[#143e99] to-[#0c2a6b] p-0.5 border-2 border-sky-300 shadow-[0_0_50px_rgba(27,80,186,0.6)] overflow-hidden flex flex-col max-h-[85vh]">
-        {/* Header */}
-        <div className="w-full bg-[#123687] px-4 py-3 flex items-center justify-between border-b border-sky-300/40 shrink-0">
-          <div className="flex items-center gap-2">
-            <History className="w-5 h-5 text-yellow-300" />
-            <div className="flex flex-col">
-              <h3 className="text-sm font-black text-white uppercase tracking-wider leading-none">
-                Wallet Ledger & Audit Trail
-              </h3>
-              <span className="text-[10px] text-sky-200 font-bold mt-0.5">
-                Authoritative idempotent transaction log
-              </span>
-            </div>
-          </div>
-          <button
-            onClick={() => {
-              sounds.playClick();
-              onClose();
-            }}
-            className="w-7 h-7 rounded-full bg-[#1b4cb8] text-white flex items-center justify-center border border-white/60 cursor-pointer active:scale-95"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+    <ResponsiveModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Wallet Ledger"
+      subtitle="Authoritative idempotent transaction log"
+      icon={<History className="w-5 h-5 text-yellow-300" />}
+      maxWidthClass="max-w-md"
+    >
 
         {/* Wallet Overview Summary Bar */}
         <div className="px-4 py-2.5 bg-[#092257] border-b border-blue-400/30 flex items-center justify-between text-xs shrink-0">
@@ -157,7 +141,6 @@ export const TransactionLedgerModal: React.FC<TransactionLedgerModalProps> = ({
             })
           )}
         </div>
-      </div>
-    </div>
+    </ResponsiveModal>
   );
 };

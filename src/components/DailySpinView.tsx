@@ -2,43 +2,97 @@ import React, { useState, useRef, useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import { sounds } from '../audio';
 import { SpinReward } from '../types';
-import { Sparkles, Trophy, Gift, ArrowDown, Check, Coins, Gem } from 'lucide-react';
+import { Sparkles, Trophy, Gift, ArrowDown, Check, Coins, Gem, Play, Video, Clock } from 'lucide-react';
+import { ResponsiveModal } from './ResponsiveModal';
+import { FREE_SPIN_COOLDOWN_MS, saveService } from '../saveService';
 
 interface DailySpinViewProps {
   playerCoins: number;
   playerGems: number;
   hasFreeSpin: boolean;
+  lastSpinTimestamp?: number;
+  bonusSpinAvailable?: boolean;
   onClaimReward: (reward: SpinReward) => void;
+  onOpenRewardedAd?: (placementId: string) => void;
+  onConsumeBonusSpin?: () => void;
+  onFreeSpinUnlocked?: () => void;
 }
 
 const REWARDS: SpinReward[] = [
   { id: '1', type: 'coins', amount: 50, label: '50 Coins', icon: '🪙', color: '#f59e0b' },
   { id: '2', type: 'gems', amount: 10, label: '10 Gems', icon: '💎', color: '#10b981' },
-  { id: '3', type: 'cards', amount: 5, label: '5 Blasters', icon: '🔫', color: '#0ea5e9' },
+  { id: '3', type: 'cards', amount: 5, label: '5 Blasters', icon: '🏹', color: '#0ea5e9' },
   { id: '4', type: 'coins', amount: 120, label: '120 Coins', icon: '🪙', color: '#eab308' },
   { id: '5', type: 'chest', amount: 1, label: 'Silver Crate', icon: '🥈', color: '#8b5cf6' },
   { id: '6', type: 'coins', amount: 250, label: '250 Coins', icon: '🪙', color: '#f97316' },
   { id: '7', type: 'gems', amount: 25, label: '25 Gems', icon: '💎', color: '#06b6d4' },
-  { id: '8', type: 'cards', amount: 4, label: '4 Mortars', icon: '🚀', color: '#ec4899' },
+  { id: '8', type: 'cards', amount: 4, label: '4 Mortars', icon: '🧪', color: '#ec4899' },
 ];
 
 export const DailySpinView: React.FC<DailySpinViewProps> = ({
   playerCoins,
   playerGems,
   hasFreeSpin,
+  lastSpinTimestamp,
+  bonusSpinAvailable = false,
   onClaimReward,
+  onOpenRewardedAd,
+  onConsumeBonusSpin,
+  onFreeSpinUnlocked,
 }) => {
   const [rotation, setRotation] = useState(0);
   const [isSpinning, setIsSpinning] = useState(false);
   const [wonReward, setWonReward] = useState<SpinReward | null>(null);
-  const [canSpin, setCanSpin] = useState(hasFreeSpin);
+  const [remainingCooldownMs, setRemainingCooldownMs] = useState<number>(() => {
+    const status = saveService.calculateFreeSpinStatus(lastSpinTimestamp);
+    return status.remainingMs;
+  });
 
   const currentRotationRef = useRef(0);
   const animationFrameRef = useRef<number | null>(null);
+  const isClaimingRef = useRef(false);
+
+  // 1-second interval to update remaining cooldown live
+  useEffect(() => {
+    if (hasFreeSpin || !lastSpinTimestamp) {
+      setRemainingCooldownMs(0);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      const status = saveService.calculateFreeSpinStatus(lastSpinTimestamp);
+      setRemainingCooldownMs(status.remainingMs);
+      if (status.hasFreeSpin) {
+        onFreeSpinUnlocked?.();
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [hasFreeSpin, lastSpinTimestamp, onFreeSpinUnlocked]);
+
+  const formatCountdown = (ms: number): string => {
+    if (ms <= 0) return '00:00:00';
+    const totalSecs = Math.floor(ms / 1000);
+    const hours = Math.floor(totalSecs / 3600);
+    const minutes = Math.floor((totalSecs % 3600) / 60);
+    const seconds = totalSecs % 60;
+    const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+    return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+  };
+
+  const canSpinNow = hasFreeSpin || bonusSpinAvailable;
 
   // Spin wheel logic
   const handleSpin = () => {
     if (isSpinning) return;
+    if (!canSpinNow) {
+      if (onOpenRewardedAd) {
+        sounds.playClick();
+        onOpenRewardedAd('placement_spin_wheel');
+      }
+      return;
+    }
+
     setIsSpinning(true);
     setWonReward(null);
 
@@ -46,7 +100,6 @@ export const DailySpinView: React.FC<DailySpinViewProps> = ({
     const winningIndex = Math.floor(Math.random() * REWARDS.length);
     const sliceAngle = 360 / REWARDS.length;
 
-    // The arrow is at top (270 deg in SVG / 0 deg at top).
     // Target rotation to align wedge center with top needle
     const extraSpins = 5 + Math.floor(Math.random() * 3); // 5-7 full turns
     const wedgeCenter = winningIndex * sliceAngle + sliceAngle / 2;
@@ -64,7 +117,7 @@ export const DailySpinView: React.FC<DailySpinViewProps> = ({
       const ease = 1 - Math.pow(1 - t, 4.5);
       const current = startRot + (targetRotation - startRot) * ease;
 
-      // Tick sound every 45 degrees
+      // Tick sound every 30 degrees
       if (Math.abs(current - lastTickAngle) >= 30) {
         sounds.playSpinTick();
         lastTickAngle = current;
@@ -102,36 +155,40 @@ export const DailySpinView: React.FC<DailySpinViewProps> = ({
   const radius = 140;
 
   return (
-    <div className="w-full h-full flex flex-col items-center justify-between p-3.5 select-none bg-gradient-to-b from-[#1448b8] via-[#0f3894] to-[#0a296e] text-white overflow-hidden">
+    <div className="w-full h-full flex flex-col items-center justify-between p-3 sm:p-4 pb-14 select-none bg-gradient-to-b from-[#1769D2] via-[#124d9c] to-[#17345D] text-white overflow-y-auto scroll-touch">
       {/* Top Header */}
-      <div className="w-full flex items-center justify-between pb-2 border-b border-blue-400/30 shrink-0">
+      <div className="w-full flex items-center justify-between pb-2.5 border-b-2 border-[#FFC83D]/40 shrink-0">
         <div>
-          <h1 className="text-lg font-black text-white flex items-center gap-1.5 drop-shadow">
-            Lucky Spin <Gift className="w-4 h-4 text-amber-400" />
+          <h1 className="text-xl sm:text-2xl font-display text-white flex items-center gap-1.5 drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]">
+            Royal Lucky Wheel <Gift className="w-5 h-5 text-[#FFC83D]" />
           </h1>
-          <span className="text-[11px] text-blue-100 font-bold">
-            Spin daily for coins, gems & cards!
+          <span className="text-[11px] text-[#F7E7BE] font-body font-bold">
+            {hasFreeSpin
+              ? '1 Free Daily Spin Available!'
+              : bonusSpinAvailable
+              ? 'Bonus Ad Spin Ready!'
+              : 'Watch AdMob Ad to Spin Again!'}
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 bg-[#0c2a6b] border border-yellow-400/40 px-2 py-0.5 rounded-xl text-xs font-black text-yellow-300 shadow">
+          <div className="flex items-center gap-1 bg-[#17345D] border-2 border-[#FFC83D] px-2.5 py-1 rounded-xl text-xs game-counter font-black text-[#FFC83D] shadow-md">
             <span>🪙</span> {playerCoins}
           </div>
-          <div className="flex items-center gap-1 bg-[#0c2a6b] border border-emerald-400/40 px-2 py-0.5 rounded-xl text-xs font-black text-emerald-300 shadow">
+          <div className="flex items-center gap-1 bg-[#17345D] border-2 border-[#79B957] px-2.5 py-1 rounded-xl text-xs game-counter font-black text-[#79B957] shadow-md">
             <span>💎</span> {playerGems}
           </div>
         </div>
       </div>
 
       {/* Wheel Container */}
-      <div className="relative my-auto flex flex-col items-center justify-center">
+      <div className="relative my-auto flex flex-col items-center justify-center shrink-0 py-3">
         {/* Top Indicator Arrow Needle */}
-        <div className="z-20 -mb-4 flex flex-col items-center drop-shadow-[0_4px_8px_rgba(10,30,80,0.6)]">
-          <div className="w-6 h-7 bg-gradient-to-b from-amber-300 to-amber-500 clip-triangle flex items-center justify-center shadow-lg border-x-2 border-t-2 border-white [clip-path:polygon(50%_100%,0%_0%,100%_0%)]" />
+        <div className="z-20 -mb-3 flex flex-col items-center drop-shadow-[0_4px_8px_rgba(0,0,0,0.7)]">
+          <div className="w-7 h-8 bg-gradient-to-b from-[#FFC83D] to-[#b38615] clip-triangle flex items-center justify-center shadow-xl border-x-2 border-t-2 border-white [clip-path:polygon(50%_100%,0%_0%,100%_0%)]" />
         </div>
 
         {/* Outer Wheel Glow Rim */}
-        <div className="relative w-72 h-72 rounded-full p-2 bg-gradient-to-tr from-amber-400 via-sky-400 to-indigo-500 shadow-[0_0_40px_rgba(56,189,248,0.5)] border-4 border-white flex items-center justify-center">
+        <div className="relative w-[min(265px,74vw,35vh)] h-[min(265px,74vw,35vh)] rounded-full p-2.5 bg-gradient-to-tr from-[#FFC83D] via-[#17345D] to-[#FFC83D] shadow-[0_0_35px_rgba(255,200,61,0.4)] border-4 border-[#FFC83D] flex items-center justify-center">
           {/* SVG Rotating Slices */}
           <svg
             className="w-full h-full rounded-full"
@@ -160,9 +217,9 @@ export const DailySpinView: React.FC<DailySpinViewProps> = ({
                 <g key={reward.id}>
                   <path
                     d={pathData}
-                    fill={i % 2 === 0 ? '#1e4db8' : '#143b92'}
-                    stroke="#38bdf8"
-                    strokeWidth="1.5"
+                    fill={i % 2 === 0 ? '#1769D2' : '#17345D'}
+                    stroke="#FFC83D"
+                    strokeWidth="2"
                   />
                   {/* Text and Icon */}
                   <g
@@ -172,7 +229,7 @@ export const DailySpinView: React.FC<DailySpinViewProps> = ({
                       textAnchor="middle"
                       dominantBaseline="middle"
                       fill="#ffffff"
-                      fontSize="14"
+                      fontSize="15"
                       fontWeight="bold"
                     >
                       {reward.icon}
@@ -181,8 +238,8 @@ export const DailySpinView: React.FC<DailySpinViewProps> = ({
                       y="16"
                       textAnchor="middle"
                       dominantBaseline="middle"
-                      fill={reward.color}
-                      fontSize="9"
+                      fill="#FFC83D"
+                      fontSize="10"
                       fontWeight="900"
                     >
                       {reward.label.split(' ')[0]}
@@ -196,60 +253,138 @@ export const DailySpinView: React.FC<DailySpinViewProps> = ({
           {/* Center Hub Button */}
           <button
             disabled={isSpinning}
-            onClick={handleSpin}
-            className="absolute z-10 w-20 h-20 rounded-full bg-gradient-to-tr from-amber-400 via-yellow-300 to-amber-500 text-amber-950 font-black text-sm tracking-wider shadow-[0_4px_15px_rgba(245,158,11,0.8)] border-4 border-white flex flex-col items-center justify-center cursor-pointer active:scale-90 transition disabled:opacity-80"
+            onClick={() => {
+              if (canSpinNow) {
+                handleSpin();
+              } else if (onOpenRewardedAd) {
+                sounds.playClick();
+                onOpenRewardedAd('placement_spin_wheel');
+              }
+            }}
+            className="absolute z-10 w-20 h-20 rounded-full bg-gradient-to-tr from-[#FFC83D] via-[#ffe382] to-[#FFC83D] text-[#17345D] font-display text-base tracking-wider shadow-[0_4px_15px_rgba(255,200,61,0.8)] border-4 border-white flex flex-col items-center justify-center cursor-pointer active:scale-90 transition disabled:opacity-80"
           >
-            <span>{isSpinning ? '...' : 'SPIN'}</span>
-            <span className="text-[9px] font-black text-amber-950/80">FREE</span>
+            <span>{isSpinning ? '...' : canSpinNow ? 'SPIN' : 'WATCH'}</span>
+            <span className="text-[9px] font-display text-[#17345D]/80">
+              {canSpinNow ? (hasFreeSpin ? 'FREE' : 'READY!') : '▶ AD'}
+            </span>
           </button>
         </div>
       </div>
 
       {/* Bottom Spin CTA & Information */}
       <div className="w-full flex flex-col items-center shrink-0 mb-2">
-        <button
-          disabled={isSpinning}
-          onClick={handleSpin}
-          className="w-full max-w-xs py-3.5 px-6 rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-amber-950 font-black text-base tracking-wide shadow-lg border-2 border-white cursor-pointer active:scale-95 transition flex items-center justify-center gap-2 disabled:opacity-50"
-        >
-          <Gift className="w-5 h-5" />
-          {isSpinning ? 'SPINNING...' : 'FREE DAILY SPIN'}
-        </button>
-        <span className="text-[10px] font-bold text-blue-200 mt-1.5">
-          Resets daily. All prizes credited instantly!
-        </span>
+        {hasFreeSpin ? (
+          /* State 1: One Free Daily Spin Available */
+          <>
+            <button
+              disabled={isSpinning}
+              onClick={handleSpin}
+              className="w-full max-w-xs py-3.5 px-6 rounded-2xl btn-royal-gold text-[#17345D] font-display text-base tracking-wide shadow-xl cursor-pointer transition flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              <Gift className="w-5 h-5 text-[#17345D]" />
+              {isSpinning ? 'SPINNING WHEEL...' : 'FREE ROYAL SPIN'}
+            </button>
+            <span className="text-[11px] font-body font-bold text-[#F7E7BE] mt-2">
+              ✨ 1 Free Daily Spin Available Today!
+            </span>
+          </>
+        ) : bonusSpinAvailable ? (
+          /* State 2: Ad Completed, Spin Unlocked */
+          <>
+            <button
+              disabled={isSpinning}
+              onClick={handleSpin}
+              className="w-full max-w-xs py-3.5 px-6 rounded-2xl btn-arena-green text-white font-display text-base tracking-wide shadow-xl cursor-pointer transition flex items-center justify-center gap-2 animate-bounce"
+            >
+              <Sparkles className="w-5 h-5 text-[#FFC83D]" />
+              {isSpinning ? 'SPINNING WHEEL...' : 'SPIN UNLOCKED! TAP TO SPIN'}
+            </button>
+            <span className="text-[11px] font-body font-bold text-[#79B957] mt-2">
+              🎉 AdMob Reward Verified! Extra Spin Ready!
+            </span>
+          </>
+        ) : (
+          /* State 3: Free Spin Used -> Watch Ad to Spin */
+          <>
+            <button
+              disabled={isSpinning}
+              onClick={() => {
+                sounds.playClick();
+                if (onOpenRewardedAd) {
+                  onOpenRewardedAd('placement_spin_wheel');
+                }
+              }}
+              className="w-full max-w-xs py-3.5 px-6 rounded-2xl btn-royal-gold text-[#17345D] font-display text-base tracking-wide shadow-xl cursor-pointer transition flex items-center justify-center gap-2 animate-pulse"
+            >
+              <Play className="w-5 h-5 fill-current text-[#17345D]" />
+              <span>WATCH AD TO SPIN</span>
+            </button>
+            <div className="flex flex-col items-center gap-1 mt-2">
+              <span className="text-[11px] font-body font-bold text-[#F7E7BE]">
+                Daily free spin claimed. Watch short AdMob video to spin again!
+              </span>
+              <div className="flex items-center gap-1.5 bg-[#0f2444] border border-[#FFC83D]/40 px-3 py-1 rounded-full text-xs font-display text-[#F7E7BE] shadow">
+                <Clock className="w-3.5 h-3.5 text-[#FFC83D]" />
+                <span>Next Free Spin in: <strong className="text-white game-counter font-extrabold">{formatCountdown(remainingCooldownMs)}</strong></span>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
-      {/* Won Reward Popup */}
+      {/* Won Reward Popup with idempotent claim lock */}
       {wonReward && (
-        <div className="fixed inset-0 z-50 bg-[#071940]/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="relative w-full max-w-xs bg-gradient-to-b from-[#1844a8] via-[#123687] to-[#0a235c] rounded-3xl p-6 border-2 border-amber-300 shadow-2xl flex flex-col items-center text-center animate-in zoom-in-95">
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-amber-400 to-yellow-500 flex items-center justify-center text-4xl shadow-xl border-2 border-white mb-2 animate-bounce">
+        <ResponsiveModal
+          isOpen={true}
+          onClose={() => {
+            if (isClaimingRef.current) return;
+            isClaimingRef.current = true;
+            const reward = wonReward;
+            setWonReward(null);
+            onClaimReward(reward);
+            if (!hasFreeSpin && bonusSpinAvailable) {
+              onConsumeBonusSpin?.();
+            }
+            setTimeout(() => { isClaimingRef.current = false; }, 400);
+          }}
+          title="Victory Spoils!"
+          subtitle={`You Won ${wonReward.label}!`}
+          icon={<span className="text-2xl">{wonReward.icon}</span>}
+          borderGlowColor="border-[#FFC83D] shadow-[0_0_50px_rgba(255,200,61,0.6)]"
+          maxWidthClass="max-w-xs"
+        >
+          <div className="flex flex-col items-center text-center">
+            <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-[#FFC83D] to-[#d49911] flex items-center justify-center text-4xl shadow-xl border-2 border-white mb-2 animate-bounce">
               {wonReward.icon}
             </div>
-            <span className="text-xs font-black text-yellow-300 uppercase tracking-widest">
-              Congratulations!
-            </span>
-            <h2 className="text-2xl font-black text-white mt-1 drop-shadow">
-              You Won {wonReward.label}!
+            <h2 className="text-xl font-display text-[#17345D] mt-1 drop-shadow">
+              {wonReward.label}
             </h2>
-            <p className="text-xs text-blue-100 mt-1 font-medium">
-              Reward added to your inventory.
+            <p className="text-xs text-[#17345D]/80 mt-1 font-body font-bold">
+              Reward added to your Royal Treasury.
             </p>
 
             <button
               onClick={() => {
+                if (isClaimingRef.current) return;
+                isClaimingRef.current = true;
                 sounds.playClick();
-                onClaimReward(wonReward);
+                const reward = wonReward;
                 setWonReward(null);
+                onClaimReward(reward);
+                if (!hasFreeSpin && bonusSpinAvailable) {
+                  onConsumeBonusSpin?.();
+                }
+                setTimeout(() => { isClaimingRef.current = false; }, 400);
               }}
-              className="mt-4 w-full py-3 rounded-2xl bg-gradient-to-r from-emerald-400 to-teal-500 hover:from-emerald-300 text-teal-950 font-black text-sm uppercase tracking-wider shadow border-2 border-white cursor-pointer active:scale-95"
+              className="mt-4 w-full py-3.5 rounded-2xl btn-arena-green text-white font-display text-sm uppercase tracking-wider shadow-lg cursor-pointer transition"
             >
-              CLAIM REWARD
+              CLAIM BOUNTY
             </button>
           </div>
-        </div>
+        </ResponsiveModal>
       )}
     </div>
   );
 };
+

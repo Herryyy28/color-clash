@@ -20,8 +20,9 @@ ROLE: Senior Unity Game Developer, 3D Gameplay Engineer, Mobile UI/UX Reconstruc
 
 Build a production-quality 3D Android game matching the exact Color Clash video reference (Unity 6 LTS + URP + C#).
 
-1. TECHNOLOGY REQUIREMENTS:
+1. TECHNOLOGY & FONT TYPOGRAPHY REQUIREMENTS:
 - Unity 6 LTS (6.3 LTS), C# clean architecture, URP (Universal Render Pipeline)
+- Font System: Lilita One (TMP Asset) for game headlines, titles, victory/defeat, reward titles; Nunito ExtraBold/SemiBold (TMP Asset) for counters, numbers, card costs, descriptions.
 - Shader Graph for real-time territory cell splatting (Red vs. Blue 50% split)
 - TextMeshPro & uGUI for portrait HUD with Canvas Scaler (Match Width/Height)
 - ScriptableObjects for cards, units, passive abilities, and avatar definitions
@@ -327,24 +328,29 @@ namespace ColorClash.Gameplay.Territory
 └── Settings/ (URP Asset, Input Actions)`;
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#071940]/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-5">
-      <div className="relative w-full max-w-3xl bg-gradient-to-b from-[#143c8c] via-[#0f2e6e] to-[#0a235c] border-2 border-sky-400 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+    <div
+      className="fixed inset-0 z-50 bg-[#071940]/85 backdrop-blur-md flex items-center justify-center p-3 safe-pt safe-pb select-none"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="relative w-full max-w-3xl bg-gradient-to-b from-[#143c8c] via-[#0f2e6e] to-[#0a235c] border-2 border-sky-400 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[calc(100dvh-var(--safe-top)-var(--safe-bottom)-20px)]">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-blue-400/40 bg-[#0a235c]">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-400 to-indigo-600 flex items-center justify-center text-white shadow-lg">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-400 to-indigo-600 flex items-center justify-center text-white shadow-lg border-2 border-white/30">
               <Cpu className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-black text-white leading-tight drop-shadow">
-                  Unity 6 LTS Android Game Blueprint
+                <h2 className="text-lg font-display text-white leading-tight drop-shadow tracking-wider">
+                  UNITY 6 LTS GAME BLUEPRINT
                 </h2>
-                <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-black px-2 py-0.5 rounded-full border border-emerald-400/40">
+                <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-display px-2 py-0.5 rounded-full border border-emerald-400/40">
                   PRODUCTION READY
                 </span>
               </div>
-              <p className="text-xs text-sky-200 font-medium">
+              <p className="text-xs text-sky-200 font-semibold font-body">
                 Color Clash 3D • Architecture, C# Scripts &amp; Master Agent Prompt
               </p>
             </div>
@@ -358,73 +364,73 @@ namespace ColorClash.Gameplay.Territory
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex border-b border-blue-400/40 bg-[#081d4a] px-5 pt-2.5 gap-2 text-xs font-bold overflow-x-auto">
+        <div className="flex border-b border-blue-400/40 bg-[#081d4a] px-5 pt-2.5 gap-2 text-xs font-display overflow-x-auto">
           <button
             onClick={() => setActiveTab('prompt')}
-            className={`pb-2.5 px-3 border-b-2 flex items-center gap-1.5 transition cursor-pointer whitespace-nowrap ${
+            className={`pb-2.5 px-3 border-b-2 flex items-center gap-1.5 transition cursor-pointer whitespace-nowrap tracking-wide ${
               activeTab === 'prompt'
-                ? 'border-sky-400 text-sky-400 font-black'
+                ? 'border-sky-400 text-sky-400'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
             <Terminal className="w-4 h-4" />
-            Master Agent Prompt
+            MASTER PROMPT
           </button>
           <button
             onClick={() => setActiveTab('scripts')}
-            className={`pb-2.5 px-3 border-b-2 flex items-center gap-1.5 transition cursor-pointer whitespace-nowrap ${
+            className={`pb-2.5 px-3 border-b-2 flex items-center gap-1.5 transition cursor-pointer whitespace-nowrap tracking-wide ${
               activeTab === 'scripts'
-                ? 'border-sky-400 text-sky-400 font-black'
+                ? 'border-sky-400 text-sky-400'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
             <Code2 className="w-4 h-4" />
-            Core C# Scripts
+            C# SCRIPTS
           </button>
           <button
             onClick={() => setActiveTab('architecture')}
-            className={`pb-2.5 px-3 border-b-2 flex items-center gap-1.5 transition cursor-pointer whitespace-nowrap ${
+            className={`pb-2.5 px-3 border-b-2 flex items-center gap-1.5 transition cursor-pointer whitespace-nowrap tracking-wide ${
               activeTab === 'architecture'
-                ? 'border-sky-400 text-sky-400 font-black'
+                ? 'border-sky-400 text-sky-400'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
             <FolderTree className="w-4 h-4" />
-            Folder Architecture
+            ARCHITECTURE
           </button>
           <button
             onClick={() => setActiveTab('roadmap')}
-            className={`pb-2.5 px-3 border-b-2 flex items-center gap-1.5 transition cursor-pointer whitespace-nowrap ${
+            className={`pb-2.5 px-3 border-b-2 flex items-center gap-1.5 transition cursor-pointer whitespace-nowrap tracking-wide ${
               activeTab === 'roadmap'
-                ? 'border-sky-400 text-sky-400 font-black'
+                ? 'border-sky-400 text-sky-400'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
             <Layers className="w-4 h-4" />
-            5-Phase Roadmap
+            ROADMAP
           </button>
         </div>
 
         {/* Tab Content */}
-        <div className="p-5 overflow-y-auto space-y-4 text-slate-300 text-sm flex-1">
+        <div className="p-5 overflow-y-auto space-y-4 text-slate-300 text-sm flex-1 font-body">
           {/* TAB 1: Master Prompt */}
           {activeTab === 'prompt' && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-extrabold text-white text-base">
+                  <h3 className="font-display text-white text-base tracking-wide">
                     Master Execution Prompt for Coding Agents
                   </h3>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-400 font-semibold">
                     Paste this into Claude Code, Antigravity, or Cursor to execute your complete Unity project.
                   </p>
                 </div>
                 <button
                   onClick={() => copyToClipboard(MASTER_PROMPT, 'prompt')}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs shadow-md transition active:scale-95 cursor-pointer"
+                  className="btn-game-yellow flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl font-display text-xs cursor-pointer shadow"
                 >
                   {copiedKey === 'prompt' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                  {copiedKey === 'prompt' ? 'Copied!' : 'Copy Master Prompt'}
+                  {copiedKey === 'prompt' ? 'COPIED!' : 'COPY PROMPT'}
                 </button>
               </div>
 

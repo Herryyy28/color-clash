@@ -59,22 +59,37 @@ export const CommanderTutorial: React.FC<CommanderTutorialProps> = ({
           <div className="absolute -bottom-2 right-5 w-4 h-4 bg-white border-r-2 border-b-2 border-[#133785] transform rotate-45" />
         </div>
 
-        {/* Purple/Indigo Robot Commander with prominent Red Cannon Snout */}
+        {/* Stylized Fantasy Royal Paladin Commander Mascot */}
         <div className="relative w-20 h-20 flex-shrink-0 animate-in fade-in zoom-in-95">
           <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_8px_16px_rgba(10,30,80,0.5)]">
-            {/* Robot Body / Armor */}
-            <path d="M25 70 L75 70 L85 95 L15 95 Z" fill="#4338ca" stroke="#1e1b4b" strokeWidth="2.5" />
-            {/* Dark Knight Visor Helmet */}
-            <ellipse cx="50" cy="45" rx="36" ry="32" fill="#312e81" stroke="#1e1b4b" strokeWidth="3" />
-            {/* Helmet Visor rim */}
-            <path d="M18 42 C18 28, 82 28, 82 42 L84 52 L16 52 Z" fill="#1e1b4b" />
-            {/* Visor Cyan Goggles / Eye Slits */}
-            <rect x="26" y="38" width="16" height="5" rx="2" fill="#22d3ee" className="animate-pulse" />
-            <rect x="58" y="38" width="16" height="5" rx="2" fill="#22d3ee" className="animate-pulse" />
-            {/* Large Red Cylindrical Cannon Snout (Signature element from video) */}
-            <ellipse cx="50" cy="58" rx="16" ry="12" fill="#dc2626" stroke="#991b1b" strokeWidth="2.5" />
-            <ellipse cx="50" cy="58" rx="11" ry="8" fill="#7f1d1d" stroke="#540c17" strokeWidth="2" />
-            <ellipse cx="50" cy="58" rx="6" ry="4" fill="#991b1b" />
+            <defs>
+              <linearGradient id="tutHelm" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#e2e8f0" />
+                <stop offset="50%" stopColor="#94a3b8" />
+                <stop offset="100%" stopColor="#475569" />
+              </linearGradient>
+              <linearGradient id="tutGold" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#fde047" />
+                <stop offset="100%" stopColor="#d97706" />
+              </linearGradient>
+            </defs>
+            {/* Blue Cape / Pauldrons */}
+            <path d="M20 72 L80 72 L90 98 L10 98 Z" fill="#1e40af" stroke="#172554" strokeWidth="2.5" />
+            <circle cx="28" cy="74" r="7" fill="url(#tutGold)" />
+            <circle cx="72" cy="74" r="7" fill="url(#tutGold)" />
+            {/* Plume / Feathers */}
+            <path d="M50 8 C42 16 40 28 44 36 C48 30 54 28 50 8 Z" fill="#38bdf8" />
+            <path d="M50 8 C58 16 60 28 56 36 C52 30 46 28 50 8 Z" fill="#2563eb" />
+            {/* Paladin Helmet Shell */}
+            <ellipse cx="50" cy="46" rx="34" ry="30" fill="url(#tutHelm)" stroke="#1e293b" strokeWidth="2.5" />
+            {/* Gold Crown Rim */}
+            <path d="M22 38 L78 38 L74 44 L26 44 Z" fill="url(#tutGold)" stroke="#b45309" strokeWidth="1" />
+            {/* Visor Slit */}
+            <path d="M28 50 L72 50 L68 60 L32 60 Z" fill="#0f172a" stroke="#334155" strokeWidth="1.5" />
+            {/* Heroic Glowing Blue Eyes */}
+            <line x1="34" y1="55" x2="46" y2="55" stroke="#38bdf8" strokeWidth="3" strokeLinecap="round" />
+            <line x1="54" y1="55" x2="66" y2="55" stroke="#38bdf8" strokeWidth="3" strokeLinecap="round" />
+            <line x1="50" y1="46" x2="50" y2="64" stroke="url(#tutGold)" strokeWidth="2" />
           </svg>
         </div>
       </div>

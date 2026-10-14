@@ -1,5 +1,38 @@
 apply plugin: 'com.android.application'
 
+def releasePropertiesFile = rootProject.file('release-signing.properties')
+def releaseProperties = new Properties()
+if (releasePropertiesFile.exists()) {
+    releaseProperties.load(new FileInputStream(releasePropertiesFile))
+}
+
+// Configurable versioning via Project property or Environment variables
+def appVersionCode = Integer.parseInt(
+    project.findProperty('VERSION_CODE') ?: 
+    System.getenv('VERSION_CODE') ?: 
+    '1'
+)
+def appVersionName = project.findProperty('VERSION_NAME') ?: 
+    System.getenv('VERSION_NAME') ?: 
+    '1.0.0'
+
+// Configurable AdMob App ID
+def admobAppId = project.findProperty('ADMOB_APP_ID') ?: 
+    System.getenv('ADMOB_APP_ID') ?: 
+    'ca-app-pub-3940256099942544~3347511713'
+
+// Release keystore resolution from file or environment
+def releaseKeystorePath = releaseProperties['RELEASE_KEYSTORE_PATH'] ?: System.getenv('RELEASE_KEYSTORE_PATH')
+def releaseKeystorePassword = releaseProperties['RELEASE_KEYSTORE_PASSWORD'] ?: System.getenv('RELEASE_KEYSTORE_PASSWORD')
+def releaseKeyAlias = releaseProperties['RELEASE_KEY_ALIAS'] ?: System.getenv('RELEASE_KEY_ALIAS')
+def releaseKeyPassword = releaseProperties['RELEASE_KEY_PASSWORD'] ?: System.getenv('RELEASE_KEY_PASSWORD')
+
+def isReleaseSigningConfigured = releaseKeystorePath && 
+    file(releaseKeystorePath).exists() && 
+    releaseKeystorePassword && 
+    releaseKeyAlias && 
+    releaseKeyPassword
+
 android {
     namespace "com.colorclash.game"
     compileSdk rootProject.ext.compileSdkVersion
@@ -7,8 +40,9 @@ android {
         applicationId "com.colorclash.game"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode appVersionCode
+        versionName appVersionName
+        manifestPlaceholders = [admobAppId: admobAppId]
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,11 +50,61 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+
+    signingConfigs {
+        debug {
+            // Standard Android debug keystore is used automatically
+        }
+        if (isReleaseSigningConfigured) {
+            release {
+                storeFile file(releaseKeystorePath)
+                storePassword releaseKeystorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (isReleaseSigningConfigured) {
+                signingConfig signingConfigs.release
+            } else {
+                // Do NOT fall back to debug signing for release builds
+                signingConfig null
+            }
         }
+    }
+}
+
+// Fail release build tasks with a clear actionable message if release signing is missing
+gradle.taskGraph.whenReady { taskGraph ->
+    def isReleaseBuild = taskGraph.allTasks.any { 
+        it.name.equalsIgnoreCase('assembleRelease') || 
+        it.name.equalsIgnoreCase('bundleRelease')
+    }
+    if (isReleaseBuild && !isReleaseSigningConfigured) {
+        throw new GradleException(
+            "\n========================================================================\n" +
+            "RELEASE BUILD ERROR: Missing Release Signing Credentials!\n" +
+            "========================================================================\n" +
+            "A release APK or AAB cannot be built with debug keys or missing keystore.\n" +
+            "Please configure your release keystore via either:\n" +
+            "  1. Creating an untracked 'android/release-signing.properties' file:\n" +
+            "     RELEASE_KEYSTORE_PATH=path/to/my-release-key.jks\n" +
+            "     RELEASE_KEYSTORE_PASSWORD=...\n" +
+            "     RELEASE_KEY_ALIAS=...\n" +
+            "     RELEASE_KEY_PASSWORD=...\n" +
+            "  OR\n" +
+            "  2. Providing Environment Variables: RELEASE_KEYSTORE_PATH, etc.\n" +
+            "See android/release-signing.properties.template for exact configuration.\n" +
+            "========================================================================\n"
+        )
     }
 }
 

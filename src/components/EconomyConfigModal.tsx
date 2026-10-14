@@ -289,8 +289,13 @@ namespace ColorClash.Ads
 }`;
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#071940]/85 backdrop-blur-md flex items-center justify-center p-3 select-none">
-      <div className="relative w-full max-w-xl rounded-3xl bg-gradient-to-b from-[#1b50ba] via-[#143e99] to-[#0c2a6b] p-0.5 border-2 border-sky-300 shadow-[0_0_50px_rgba(27,80,186,0.6)] overflow-hidden flex flex-col max-h-[88vh]">
+    <div
+      className="fixed inset-0 z-50 bg-[#071940]/85 backdrop-blur-md flex items-center justify-center p-3 safe-pt safe-pb select-none"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="relative w-full max-w-xl rounded-3xl bg-gradient-to-b from-[#1b50ba] via-[#143e99] to-[#0c2a6b] p-0.5 border-2 border-sky-300 shadow-[0_0_50px_rgba(27,80,186,0.6)] overflow-hidden flex flex-col max-h-[calc(100dvh-var(--safe-top)-var(--safe-bottom)-20px)]">
         {/* Header */}
         <div className="w-full bg-[#123687] px-4 py-3 flex items-center justify-between border-b border-sky-300/40 shrink-0">
           <div className="flex items-center gap-2">

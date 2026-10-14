@@ -45,10 +45,81 @@ import {
   BattleEvent,
 } from './types';
 import { ALL_CARDS, INITIAL_PLAYER_DECK, LEVELS } from './cardsData';
+import { SectorSelectionModal } from './components/SectorSelectionModal';
+import { MatchmakingDebugPanel } from './components/MatchmakingDebugPanel';
+import { sectorManager } from './services/sectorManager';
+import { matchmakingService, OpponentMatchup } from './services/matchmakingService';
+import { playerProgressionService } from './services/playerProgressionService';
+import { deckStrengthCalculator } from './services/deckStrengthCalculator';
+import { aiDifficultyController } from './services/aiDifficultyController';
 import { sounds } from './audio';
 import { saveService } from './saveService';
 import { Play, RotateCcw, Sparkles, Trophy, Home } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { App as CapApp } from '@capacitor/app';
+
+export type BackActionType =
+  | 'ignore_ad'
+  | 'close_coin_animation'
+  | 'close_shortfall'
+  | 'close_daily_reward'
+  | 'close_ledger'
+  | 'close_economy'
+  | 'close_debug'
+  | 'close_sector'
+  | 'close_avatar'
+  | 'close_no_ads'
+  | 'close_unity'
+  | 'close_tech'
+  | 'close_versus'
+  | 'unpause_battle'
+  | 'pause_battle'
+  | 'return_to_home'
+  | 'exit_splash'
+  | 'switch_to_battle_tab'
+  | 'exit_app';
+
+export interface BackNavState {
+  showRewardedAdModal: boolean;
+  hasCoinAnimation: boolean;
+  isShortfallOpen: boolean;
+  showDailyRewardModal: boolean;
+  showLedgerModal: boolean;
+  showEconomyModal: boolean;
+  showDebugPanel: boolean;
+  showSectorModal: boolean;
+  showAvatarModal: boolean;
+  showNoAdsModal: boolean;
+  showUnityModal: boolean;
+  showTechModal: boolean;
+  showVersusModal: boolean;
+  gameState: 'splash' | 'menu' | 'playing' | 'victory' | 'defeat';
+  isPaused: boolean;
+  currentTab: string;
+}
+
+export function resolveBackAction(s: BackNavState): BackActionType {
+  // 1. Critical safety: never interrupt an active rewarded ad or corrupt reward flow
+  if (s.showRewardedAdModal) return 'ignore_ad';
+  if (s.hasCoinAnimation) return 'close_coin_animation';
+  if (s.isShortfallOpen) return 'close_shortfall';
+  if (s.showDailyRewardModal) return 'close_daily_reward';
+  if (s.showLedgerModal) return 'close_ledger';
+  if (s.showEconomyModal) return 'close_economy';
+  if (s.showDebugPanel) return 'close_debug';
+  if (s.showSectorModal) return 'close_sector';
+  if (s.showAvatarModal) return 'close_avatar';
+  if (s.showNoAdsModal) return 'close_no_ads';
+  if (s.showUnityModal) return 'close_unity';
+  if (s.showTechModal) return 'close_tech';
+  if (s.showVersusModal) return 'close_versus';
+  if (s.gameState === 'playing' && s.isPaused) return 'unpause_battle';
+  if (s.gameState === 'playing' && !s.isPaused) return 'pause_battle';
+  if (s.gameState === 'victory' || s.gameState === 'defeat') return 'return_to_home';
+  if (s.gameState === 'splash') return 'exit_splash';
+  if (s.currentTab !== 'battle') return 'switch_to_battle_tab';
+  return 'exit_app';
+}
 
 export default function App() {
   // Navigation & High-level State
@@ -58,7 +129,12 @@ export default function App() {
   // Load persistent game data on initialization
   const initialSave = useRef(saveService.load()).current;
   const [currentLevelIndex, setCurrentLevelIndex] = useState(initialSave.currentLevelIndex);
-  const currentLevel: LevelConfig = LEVELS[currentLevelIndex] || LEVELS[0];
+  const currentLevel: LevelConfig = sectorManager.getSectorByIndex(currentLevelIndex);
+
+  // Sector Selection & Matchmaking State
+  const [showSectorModal, setShowSectorModal] = useState(false);
+  const [showDebugPanel, setShowDebugPanel] = useState(false);
+  const [currentMatchup, setCurrentMatchup] = useState<OpponentMatchup | null>(null);
 
   // Modals
   const [showTechModal, setShowTechModal] = useState(false);
@@ -131,8 +207,10 @@ export default function App() {
   // Chest Slots (4 slots with timers)
   const [chestSlots, setChestSlots] = useState<ChestSlot[]>(initialSave.chestSlots);
 
-  // Daily spin state
+  // Daily spin state with persistent cooldown tracking
   const [hasFreeSpin, setHasFreeSpin] = useState(initialSave.hasFreeSpin);
+  const [lastSpinTimestamp, setLastSpinTimestamp] = useState<number | undefined>(initialSave.lastSpinTimestamp);
+  const [bonusSpinAvailable, setBonusSpinAvailable] = useState(false);
 
   // Match stats & pause
   const [isPaused, setIsPaused] = useState(false);
@@ -196,15 +274,35 @@ export default function App() {
   // Real-time chest unlock timer interval
   useEffect(() => {
     const interval = setInterval(() => {
-      setChestSlots((prev) => [...prev]);
+      setChestSlots((prev) => {
+        const hasUnlocking = prev.some(
+          (s) => s.unlockStartedAt !== null && !s.isOpened
+        );
+        return hasUnlocking ? [...prev] : prev;
+      });
     }, 1000);
     return () => clearInterval(interval);
   }, []);
 
-  // Initialize or reset a level
-  const startLevel = useCallback((lvlIndex: number) => {
-    const lvl = LEVELS[lvlIndex] || LEVELS[0];
+  // Initialize or reset a level with fair matchmaking and sector validation
+  const startLevel = useCallback((lvlIndex: number, existingMatchup?: OpponentMatchup) => {
+    const allSectors = sectorManager.getAllSectors();
+    const lvl = allSectors[lvlIndex] || allSectors[0];
+
+    // Enforce progression requirements: locked sector cannot start battle
+    if (!sectorManager.isSectorUnlocked(lvl.sectorId, playerProfile.trophies)) {
+      sounds.playCardDrop();
+      setShowSectorModal(true);
+      return;
+    }
+
     setCurrentLevelIndex(lvlIndex);
+
+    // Fair Matchmaking Calculation based on player trophies, deck strength, and MMR
+    // Prioritize existing matched opponent previewed on sector map
+    const deckAnalysis = deckStrengthCalculator.calculate(activeDeck, inventory);
+    const matchup = existingMatchup || currentMatchup || matchmakingService.findMatchup(lvl.sectorId, playerProfile, deckAnalysis.totalRating);
+    setCurrentMatchup(matchup);
 
     // Initial grid: 50% red, 50% blue
     const newGrid: Team[][] = [];
@@ -217,9 +315,9 @@ export default function App() {
     }
     setGrid(newGrid);
 
-    // Initial Units
+    // Initial Units (Beginner protection: beginner sectors have 0 pre-spawned defensive cannons)
     const initUnits: Unit[] = [];
-    if (lvl.initialEnemyUnits) {
+    if (lvl.initialEnemyUnits && lvl.initialEnemyUnits.length > 0 && !matchup.isBeginnerProtected) {
       lvl.initialEnemyUnits.forEach((u, i) => {
         const cardData = ALL_CARDS[u.cardId] || ALL_CARDS.cannon;
         initUnits.push({
@@ -233,7 +331,7 @@ export default function App() {
           shieldHp: cardData.passive?.shieldValue ?? 0,
           maxShieldHp: cardData.passive?.shieldValue ?? 0,
           speedMultiplier: cardData.passive?.speedFactor ?? 1.0,
-          level: lvl.level,
+          level: matchup.cardLevel,
           angle: Math.PI / 2, // facing down towards player
           shootCooldown: 1.0,
           barrelRecoil: 0,
@@ -250,7 +348,7 @@ export default function App() {
     setEmotes([]);
     setTimeRemaining(180);
     setEnergy(6);
-    enemyEnergyRef.current = 5;
+    enemyEnergyRef.current = matchup.aiConfig.initialEnergy;
     lastAiPlayRef.current = Date.now();
     setBluePercent(50);
     setRedPercent(50);
@@ -262,7 +360,7 @@ export default function App() {
         id: `start-${Date.now()}`,
         type: 'match_event',
         text: 'Clash Commenced!',
-        subtext: `Sector ${lvl.level}`,
+        subtext: `Sector ${lvl.level}: ${lvl.name}`,
         team: 'neutral',
         timestamp: Date.now(),
         icon: '⚔️',
@@ -281,7 +379,7 @@ export default function App() {
     setIsPaused(false);
     setBattleCountdown(3);
     sounds.playClick();
-  }, [activeDeck]);
+  }, [activeDeck, inventory, playerProfile]);
 
   // Battle countdown ticker (3 -> 2 -> 1 -> CLASH! -> start)
   useEffect(() => {
@@ -312,8 +410,9 @@ export default function App() {
       currentLevelIndex,
       isMuted,
       hasFreeSpin,
+      lastSpinTimestamp,
     });
-  }, [playerProfile, inventory, activeDeck, chestSlots, currentLevelIndex, isMuted, hasFreeSpin]);
+  }, [playerProfile, inventory, activeDeck, chestSlots, currentLevelIndex, isMuted, hasFreeSpin, lastSpinTimestamp]);
 
   // Rewarded Ad & Animation Helpers
   const handleLaunchAd = useCallback((placementId: string, customRewardCoins?: number) => {
@@ -324,6 +423,10 @@ export default function App() {
 
   const handleShowCoinAnimation = useCallback((amount: number, reason: string) => {
     setCoinAnimation({ amount, reason });
+  }, []);
+
+  const handleCloseCoinAnimation = useCallback(() => {
+    setCoinAnimation(null);
   }, []);
 
   const handleAdRewardClaimed = useCallback((coinsEarned: number) => {
@@ -338,8 +441,130 @@ export default function App() {
             }
           : null
       );
+    } else if (activeAdPlacement === 'placement_spin_wheel') {
+      setBonusSpinAvailable(true);
     }
   }, [activeAdPlacement, handleShowCoinAnimation]);
+
+  // Android Native Back Button Topmost Modal & Flow Resolver (Phase 4)
+  const backNavStateRef = useRef<BackNavState>({
+    showRewardedAdModal,
+    hasCoinAnimation: coinAnimation !== null,
+    isShortfallOpen: shortfallData.isOpen,
+    showDailyRewardModal,
+    showLedgerModal,
+    showEconomyModal,
+    showDebugPanel,
+    showSectorModal,
+    showAvatarModal,
+    showNoAdsModal,
+    showUnityModal,
+    showTechModal,
+    showVersusModal,
+    gameState,
+    isPaused,
+    currentTab,
+  });
+
+  backNavStateRef.current = {
+    showRewardedAdModal,
+    hasCoinAnimation: coinAnimation !== null,
+    isShortfallOpen: shortfallData.isOpen,
+    showDailyRewardModal,
+    showLedgerModal,
+    showEconomyModal,
+    showDebugPanel,
+    showSectorModal,
+    showAvatarModal,
+    showNoAdsModal,
+    showUnityModal,
+    showTechModal,
+    showVersusModal,
+    gameState,
+    isPaused,
+    currentTab,
+  };
+
+  useEffect(() => {
+    let listenerHandle: { remove: () => void } | null = null;
+
+    const setupBackListener = async () => {
+      try {
+        listenerHandle = await CapApp.addListener('backButton', () => {
+          const action = resolveBackAction(backNavStateRef.current);
+          switch (action) {
+            case 'ignore_ad':
+              console.log('[BackNav] Back button ignored during active rewarded ad.');
+              break;
+            case 'close_coin_animation':
+              handleCloseCoinAnimation();
+              break;
+            case 'close_shortfall':
+              setShortfallData((prev) => ({ ...prev, isOpen: false }));
+              break;
+            case 'close_daily_reward':
+              setShowDailyRewardModal(false);
+              break;
+            case 'close_ledger':
+              setShowLedgerModal(false);
+              break;
+            case 'close_economy':
+              setShowEconomyModal(false);
+              break;
+            case 'close_debug':
+              setShowDebugPanel(false);
+              break;
+            case 'close_sector':
+              setShowSectorModal(false);
+              break;
+            case 'close_avatar':
+              setShowAvatarModal(false);
+              break;
+            case 'close_no_ads':
+              setShowNoAdsModal(false);
+              break;
+            case 'close_unity':
+              setShowUnityModal(false);
+              break;
+            case 'close_tech':
+              setShowTechModal(false);
+              break;
+            case 'close_versus':
+              setShowVersusModal(false);
+              break;
+            case 'unpause_battle':
+              setIsPaused(false);
+              break;
+            case 'pause_battle':
+              setIsPaused(true);
+              break;
+            case 'return_to_home':
+              setGameState('menu');
+              setCurrentTab('battle');
+              break;
+            case 'exit_splash':
+              setGameState('menu');
+              setCurrentTab('battle');
+              break;
+            case 'switch_to_battle_tab':
+              setCurrentTab('battle');
+              break;
+            case 'exit_app':
+              CapApp.exitApp();
+              break;
+          }
+        });
+      } catch (err) {
+        // Safe no-op in browser development
+      }
+    };
+
+    setupBackListener();
+
+    return () => {
+      listenerHandle?.remove();
+    };
+  }, [handleCloseCoinAnimation]);
 
   // Authoritative Match Reward Resolver (Master Prompt Requirement 5)
   const triggerMatchResult = useCallback((outcome: 'victory' | 'defeat') => {
@@ -397,7 +622,35 @@ export default function App() {
 
       setGameState('defeat');
     }
-  }, [gameState, currentLevel, timeRemaining, bluePercent]);
+
+    // Authoritative Match Progression & Adaptive Difficulty Update
+    const progressionRecord = playerProgressionService.recordMatchResult(
+      outcome === 'victory' ? 'win' : 'loss',
+      currentLevel.sectorId,
+      playerProfile
+    );
+    setPlayerProfile(progressionRecord.updatedProfile);
+    saveService.save({ playerProfile: progressionRecord.updatedProfile });
+
+    // Grant first-clear bonus on valid sector victory
+    if (progressionRecord.isFirstClear && progressionRecord.firstClearReward) {
+      const bonus = progressionRecord.firstClearReward;
+      const claimId = currencyService.generateClaimId(`first_clear_sec_${currentLevel.sectorId}`);
+      currencyService.creditCoins(bonus.coins, 'reward_battle', `${claimId}_coins`, `${bonus.label} Coins`);
+      currencyService.creditGems(bonus.gems, 'reward_battle', `${claimId}_gems`, `${bonus.label} Gems`);
+      handleShowCoinAnimation(bonus.coins, `${bonus.label}!`);
+    }
+
+    if (progressionRecord.newSectorUnlocked && progressionRecord.unlockedSectorName) {
+      addBattleEvent({
+        type: 'match_event',
+        text: `New Realm Unlocked!`,
+        subtext: progressionRecord.unlockedSectorName,
+        team: 'blue',
+        icon: '👑',
+      });
+    }
+  }, [gameState, currentLevel, timeRemaining, bluePercent, playerProfile, addBattleEvent]);
 
   const handleDoubleBattleRewardWithAd = useCallback(() => {
     if (!matchRewardResult || matchRewardResult.hasDoubledReward) return;
@@ -543,24 +796,31 @@ export default function App() {
     };
   }, [gameState, battleCountdown, isPaused, bluePercent, redPercent, maxEnergy]);
 
-  // Enemy AI Logic Loop
+  // Enemy AI Logic Loop (Driven by Adaptive AI Difficulty Controller & Matchmaking Profile)
   useEffect(() => {
     if (gameState !== 'playing' || battleCountdown !== null || isPaused) return;
 
+    const aiConfig = currentMatchup?.aiConfig || aiDifficultyController.getBehaviorConfig('beginner');
+    const intervalMs = aiConfig.decisionIntervalMs;
+
     const aiInterval = setInterval(() => {
       const now = Date.now();
-      if (now - lastAiPlayRef.current < currentLevel.opponentAiInterval) return;
+      if (now - lastAiPlayRef.current < intervalMs) return;
 
-      const aiCards = [ALL_CARDS.cannon, ALL_CARDS.blaster, ALL_CARDS.gatling, ALL_CARDS.saw, ALL_CARDS.mortar];
-      const pick = aiCards[Math.floor(Math.random() * aiCards.length)];
+      const pick = aiDifficultyController.pickTacticalDeployment(
+        aiConfig,
+        enemyEnergyRef.current,
+        unitsRef.current,
+        COLS,
+        ROWS
+      );
 
-      if (enemyEnergyRef.current >= pick.cost) {
-        enemyEnergyRef.current -= pick.cost;
+      if (pick && enemyEnergyRef.current >= pick.card.cost) {
+        enemyEnergyRef.current -= pick.card.cost;
         lastAiPlayRef.current = now;
 
-        const isSaw = pick.id === 'saw';
-        const spawnX = Math.floor(Math.random() * (COLS - 4)) + 2;
-        const spawnY = isSaw ? 2 : Math.floor(Math.random() * 8) + 2;
+        const isSaw = pick.card.id === 'saw';
+        const cardLevel = currentMatchup?.cardLevel || 1;
 
         if (isSaw) {
           sounds.playSawWhir();
@@ -577,16 +837,16 @@ export default function App() {
               id: `saw-enemy-${Date.now()}`,
               team: 'red',
               type: 'saw',
-              x: spawnX,
-              y: spawnY,
+              x: pick.spawnX,
+              y: pick.spawnY,
               vx: 0,
-              vy: 0.35 * (pick.passive?.speedFactor ?? 1.0),
-              startX: spawnX,
-              startY: spawnY,
-              targetX: spawnX,
+              vy: 0.35 * (pick.card.passive?.speedFactor ?? 1.0),
+              startX: pick.spawnX,
+              startY: pick.spawnY,
+              targetX: pick.spawnX,
               targetY: ROWS - 1,
-              paintRadius: pick.paintRadius,
-              damage: pick.damage,
+              paintRadius: pick.card.paintRadius,
+              damage: pick.card.damage,
               life: 180,
               maxLife: 180,
               rotation: 0,
@@ -594,13 +854,13 @@ export default function App() {
           ]);
         } else {
           sounds.playCardDeploy();
-          if (pick.id === 'mortar' || pick.id === 'gatling' || pick.id === 'roller') {
+          if (pick.card.id === 'mortar' || pick.card.id === 'gatling' || pick.card.id === 'roller') {
             addBattleEvent({
               type: 'special_deploy',
-              text: `Red ${pick.name} Deployed`,
+              text: `Red ${pick.card.name} Deployed`,
               subtext: 'Enemy tactical unit',
               team: 'red',
-              icon: pick.icon,
+              icon: pick.card.icon,
             });
           }
           setUnits((prev) => [
@@ -608,28 +868,28 @@ export default function App() {
             {
               id: `enemy-unit-${Date.now()}`,
               team: 'red',
-              cardId: pick.id,
-              x: spawnX,
-              y: spawnY,
-              hp: pick.hp,
-              maxHp: pick.hp,
-              shieldHp: pick.passive?.shieldValue ?? 0,
-              maxShieldHp: pick.passive?.shieldValue ?? 0,
-              speedMultiplier: pick.passive?.speedFactor ?? 1.0,
-              level: currentLevel.level,
+              cardId: pick.card.id,
+              x: pick.spawnX,
+              y: pick.spawnY,
+              hp: pick.card.hp,
+              maxHp: pick.card.hp,
+              shieldHp: pick.card.passive?.shieldValue ?? 0,
+              maxShieldHp: pick.card.passive?.shieldValue ?? 0,
+              speedMultiplier: pick.card.passive?.speedFactor ?? 1.0,
+              level: cardLevel,
               angle: Math.PI / 2,
-              shootCooldown: pick.fireRate,
+              shootCooldown: pick.card.fireRate,
               barrelRecoil: 0,
               totalShotsFired: 0,
-              passive: pick.passive,
+              passive: pick.card.passive,
             },
           ]);
         }
       }
-    }, 1200);
+    }, 1000);
 
     return () => clearInterval(aiInterval);
-  }, [gameState, battleCountdown, isPaused, currentLevel, addBattleEvent]);
+  }, [gameState, battleCountdown, isPaused, currentMatchup, addBattleEvent]);
 
   // Main 60 FPS Combat, Recoil & Projectile Physics loop
   useEffect(() => {
@@ -1206,9 +1466,17 @@ export default function App() {
     });
   };
 
-  // Daily Spin Reward Handler
+  // Daily Spin Reward Handler with idempotent claim verification & cooldown timestamping
   const handleClaimSpinReward = (reward: SpinReward) => {
-    setHasFreeSpin(false);
+    if (hasFreeSpin) {
+      const now = Date.now();
+      setHasFreeSpin(false);
+      setLastSpinTimestamp(now);
+      saveService.save({ hasFreeSpin: false, lastSpinTimestamp: now });
+    } else if (bonusSpinAvailable) {
+      setBonusSpinAvailable(false);
+    }
+
     const claimId = currencyService.generateClaimId(`spin_${Date.now()}`);
     if (reward.type === 'coins') {
       currencyService.creditCoins(reward.amount, 'reward_spin', claimId, `Daily Wheel: ${reward.label}`);
@@ -1249,9 +1517,8 @@ export default function App() {
     }
   };
 
-  // Victory navigation (Coins are authoritatively credited on battle conclusion)
+  // Victory navigation (Coins & Trophies are authoritatively credited on battle conclusion via playerProgressionService)
   const handleNextLevel = () => {
-    setPlayerProfile((p) => ({ ...p, trophies: p.trophies + 15 }));
     // Try to drop a chest in empty slot
     const emptySlot = chestSlots.find((s) => s.isOpened);
     if (emptySlot) {
@@ -1273,12 +1540,18 @@ export default function App() {
         )
       );
     }
-    const nextIdx = (currentLevelIndex + 1) % LEVELS.length;
-    startLevel(nextIdx);
+    const allSectors = sectorManager.getAllSectors();
+    const nextIdx = (currentLevelIndex + 1) % allSectors.length;
+    if (sectorManager.isSectorUnlocked(allSectors[nextIdx].sectorId, playerProfile.trophies)) {
+      startLevel(nextIdx);
+    } else {
+      setGameState('menu');
+      setCurrentTab('battle');
+      setShowSectorModal(true);
+    }
   };
 
   const handleReturnToHome = () => {
-    setPlayerProfile((p) => ({ ...p, trophies: p.trophies + 15 }));
     setGameState('menu');
     setCurrentTab('battle');
   };
@@ -1297,7 +1570,7 @@ export default function App() {
       {/* Mobile Portrait Shell */}
       <div className="w-full h-full max-w-full sm:max-w-[440px] flex flex-col items-center justify-between relative bg-gradient-to-b from-[#1343a8] via-[#0e358c] to-[#0a296d] sm:shadow-[0_0_50px_rgba(20,90,220,0.4)] sm:border-x-2 sm:border-blue-400/50 overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
         {/* ======================================================== */}
-        {/* 1. START / SPLASH SCREEN (Frames 16.6s & 23.7s from Video) */}
+        {/* 1. START / SPLASH SCREEN (Frames 20.0s - 35.1s from Reference Video) */}
         {/* ======================================================== */}
         {gameState === 'splash' && (
           <div
@@ -1306,17 +1579,16 @@ export default function App() {
               setGameState('menu');
               setCurrentTab('battle');
             }}
-            className="absolute inset-0 z-50 flex flex-col items-center justify-between p-6 cursor-pointer overflow-hidden select-none"
-            style={{
-              background: 'radial-gradient(circle at 50% 30%, #3b82f6 0%, #1d4ed8 35%, #1e3a8a 65%, #0f2766 100%)',
-            }}
+            className="absolute inset-0 z-50 flex flex-col items-center justify-between p-6 cursor-pointer overflow-hidden select-none bg-gradient-to-b from-[#1448b8] via-[#103b96] to-[#0a235c]"
           >
-            {/* Background grid */}
-            <div className="absolute inset-0 opacity-20 pointer-events-none bg-[radial-gradient(#ffffff_1.5px,transparent_1.5px)] [background-size:20px_20px]" />
+            {/* Authentic Diamond Pixel Cube Mosaic Background (Video 20.0s - 35.1s) */}
+            <div className="absolute inset-0 opacity-25 pointer-events-none bg-[radial-gradient(#38bdf8_2px,transparent_2px),radial-gradient(#ec4899_2px,transparent_2px)] [background-size:28px_28px] [background-position:0_0,14px_14px]" />
+            <div className="absolute top-0 right-0 w-72 h-72 bg-gradient-to-br from-cyan-400/20 via-blue-600/30 to-transparent rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute bottom-10 left-0 w-72 h-72 bg-gradient-to-tr from-rose-600/25 via-purple-600/20 to-transparent rounded-full blur-3xl pointer-events-none" />
 
             {/* Top Bar with Trophy count */}
-            <div className="w-full flex justify-between items-center z-10">
-              <span className="text-xs font-black text-white/90 bg-blue-900/60 backdrop-blur px-3 py-1 rounded-full border border-blue-300/40 flex items-center gap-1.5 shadow">
+            <div className="w-full flex justify-between items-center z-10 pt-2">
+              <span className="text-xs font-black text-white bg-[#092257]/80 backdrop-blur px-3 py-1 rounded-full border border-sky-300/40 flex items-center gap-1.5 shadow">
                 <Trophy className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
                 Trophies: {playerProfile.trophies}
               </span>
@@ -1324,32 +1596,39 @@ export default function App() {
 
             {/* Central 3D "COLOR CLASH" Logo Image */}
             <div className="flex flex-col items-center my-auto z-10 animate-in zoom-in-95 duration-700">
-              <div className="relative w-60 h-60 flex items-center justify-center filter drop-shadow-[0_15px_30px_rgba(15,35,90,0.6)] animate-float">
+              <div className="relative w-64 h-64 sm:w-72 sm:h-72 flex items-center justify-center filter drop-shadow-[0_20px_35px_rgba(10,25,80,0.8)] animate-float">
                 <img
                   src="/logo.png"
                   alt="Color Clash"
-                  className="w-full h-full object-contain rounded-3xl"
+                  className="w-full h-full object-contain"
                 />
               </div>
 
+              {/* Japanese Subtitle Ribbon Pill (Matching Video 20.0s - 35.1s) */}
+              <div className="bg-[#0f172a] border border-white/60 px-4 py-0.5 rounded-full shadow-lg -mt-4 mb-3 z-10">
+                <span className="text-[10px] font-black tracking-widest text-white uppercase">
+                  カラークラッシュ
+                </span>
+              </div>
+
               {/* Pulsing "TAP TO BATTLE" Prompt */}
-              <div className="mt-4 flex flex-col items-center gap-2">
+              <div className="mt-2 flex flex-col items-center gap-2">
                 <div className="px-8 py-3.5 rounded-full bg-gradient-to-r from-emerald-400 via-sky-400 to-blue-500 text-blue-950 font-black text-lg tracking-wider shadow-[0_10px_30px_rgba(56,189,248,0.7)] border-2 border-white animate-pulse flex items-center gap-2">
                   <Play className="w-5 h-5 fill-current" />
                   TAP TO BATTLE
                 </div>
-                <span className="text-xs font-bold text-white/80">Sector: {currentLevel.name}</span>
+                <span className="text-xs font-bold text-sky-200">Sector: {currentLevel.name}</span>
               </div>
             </div>
 
-            {/* Bottom Publisher & Studio Branding */}
-            <div className="w-full flex justify-between items-end z-10 px-2 text-white/80">
-              <div className="flex flex-col items-start">
-                <span className="text-xl font-black tracking-tighter text-white drop-shadow">
+            {/* Bottom Publisher & Studio Branding (Video 20.0s - 35.1s) */}
+            <div className="w-full flex justify-between items-end z-10 px-2 pb-2 text-white/90">
+              <div className="flex flex-col items-start leading-none">
+                <span className="text-2xl font-black tracking-tighter text-white drop-shadow">
                   voodoo
                 </span>
-                <span className="text-[8px] font-bold text-white/60 tracking-wider">
-                  INSTANT GAMES
+                <span className="text-[8px] font-bold text-white/70 tracking-widest uppercase mt-0.5">
+                  Instant Games
                 </span>
               </div>
 
@@ -1383,15 +1662,27 @@ export default function App() {
                   currentLevel={currentLevel}
                   selectedSectorIndex={currentLevelIndex}
                   onSelectSector={(idx) => setCurrentLevelIndex(idx)}
-                  levels={LEVELS}
+                  levels={sectorManager.getAllSectors()}
                   activeDeck={activeDeck}
                   chestSlots={chestSlots}
                   onOpenChest={handleOpenChest}
                   onStartUnlockChest={handleStartUnlockChest}
-                  onStartBattle={() => setShowVersusModal(true)}
+                  onStartBattle={() => {
+                    const sectorId = currentLevel.level;
+                    if (!sectorManager.isSectorUnlocked(sectorId, playerProfile.trophies)) {
+                      sounds.playCardDrop();
+                      setShowSectorModal(true);
+                      return;
+                    }
+                    const deckAnalysis = deckStrengthCalculator.calculate(activeDeck, inventory);
+                    const matchup = matchmakingService.findMatchup(sectorId, playerProfile, deckAnalysis.totalRating);
+                    setCurrentMatchup(matchup);
+                    setShowVersusModal(true);
+                  }}
                   onOpenDeckTab={() => setCurrentTab('cards')}
                   onOpenShopTab={() => setCurrentTab('shop')}
                   onOpenSpinTab={() => setCurrentTab('spin')}
+                  onOpenSettingsTab={() => setCurrentTab('settings')}
                   onOpenUnityModal={() => setShowUnityModal(true)}
                   onOpenTechModal={() => setShowTechModal(true)}
                   onOpenAvatarModal={() => setShowAvatarModal(true)}
@@ -1400,6 +1691,8 @@ export default function App() {
                   onOpenDailyRewardModal={() => setShowDailyRewardModal(true)}
                   onOpenLedgerModal={() => setShowLedgerModal(true)}
                   onOpenEconomyModal={() => setShowEconomyModal(true)}
+                  onOpenSectorModal={() => setShowSectorModal(true)}
+                  onOpenDebugPanel={() => setShowDebugPanel(true)}
                 />
               )}
 
@@ -1462,7 +1755,15 @@ export default function App() {
                   playerCoins={playerProfile.coins}
                   playerGems={playerProfile.gems}
                   hasFreeSpin={hasFreeSpin}
+                  lastSpinTimestamp={lastSpinTimestamp}
+                  bonusSpinAvailable={bonusSpinAvailable}
                   onClaimReward={handleClaimSpinReward}
+                  onOpenRewardedAd={handleLaunchAd}
+                  onConsumeBonusSpin={() => setBonusSpinAvailable(false)}
+                  onFreeSpinUnlocked={() => {
+                    setHasFreeSpin(true);
+                    saveService.save({ hasFreeSpin: true });
+                  }}
                 />
               )}
 
@@ -1487,7 +1788,7 @@ export default function App() {
             <BottomNavBar
               currentTab={currentTab}
               onSelectTab={setCurrentTab}
-              hasFreeSpin={hasFreeSpin}
+              hasFreeSpin={hasFreeSpin || bonusSpinAvailable}
               upgradeableCardsCount={upgradeableCardsCount}
             />
           </div>
@@ -1523,6 +1824,9 @@ export default function App() {
                 setIsPaused(true);
               }}
               isPaused={isPaused}
+              opponentAvatarId={currentMatchup?.avatarId}
+              opponentName={currentMatchup?.name}
+              opponentLevel={currentMatchup?.cardLevel}
             />
 
             {/* Battlefield Canvas */}
@@ -1636,34 +1940,34 @@ export default function App() {
         {/* 5. DEFEAT POPUP MODAL                                    */}
         {/* ======================================================== */}
         {gameState === 'defeat' && (
-          <div className="fixed inset-0 z-50 bg-[#071940]/85 backdrop-blur-md flex items-center justify-center p-4">
-            <div className="relative w-full max-w-sm bg-gradient-to-b from-[#183478] to-[#601222] rounded-3xl p-6 border-2 border-rose-400 shadow-[0_0_50px_rgba(244,63,94,0.35)] flex flex-col items-center text-center animate-in zoom-in-90">
-              <div className="w-16 h-16 rounded-2xl bg-rose-600 flex items-center justify-center text-3xl shadow-xl border-2 border-white mb-2">
+          <div className="fixed inset-0 z-50 bg-[#071940]/85 backdrop-blur-md flex items-center justify-center p-3 safe-pt safe-pb select-none overflow-y-auto">
+            <div className="relative w-full max-w-sm max-h-[calc(100dvh-var(--safe-top)-var(--safe-bottom)-24px)] overflow-y-auto scroll-touch bg-gradient-to-b from-[#183478] to-[#601222] rounded-3xl p-5 sm:p-6 border-2 border-rose-400 shadow-[0_0_50px_rgba(244,63,94,0.35)] flex flex-col items-center text-center animate-in zoom-in-90 shrink-0">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-rose-600 flex items-center justify-center text-2xl sm:text-3xl shadow-xl border-2 border-white mb-2 shrink-0">
                 💥
               </div>
-              <h1 className="text-3xl font-black text-rose-300 mt-2">DEFEAT</h1>
+              <h1 className="text-2xl sm:text-3xl font-black text-rose-300 mt-1">DEFEAT</h1>
               <p className="text-xs text-blue-100 mt-1">
                 Red claimed {redPercent}% territory. Don't give up!
               </p>
               {matchRewardResult && (
-                <div className="bg-[#0c2a6b] border border-blue-400/40 rounded-xl px-3 py-1.5 mt-2.5 text-xs font-black text-yellow-300 shadow">
+                <div className="bg-[#0c2a6b] border border-blue-400/40 rounded-xl px-3 py-1.5 mt-2.5 text-xs font-black text-yellow-300 shadow shrink-0">
                   🪙 Participation Reward: +{matchRewardResult.rewardCoins} Coins
                 </div>
               )}
-              <div className="flex gap-2 w-full mt-5">
+              <div className="flex gap-2 w-full mt-4 sm:mt-5 shrink-0">
                 <button
                   onClick={() => {
                     setGameState('menu');
                     setCurrentTab('battle');
                   }}
-                  className="flex-1 py-3 px-4 rounded-2xl bg-blue-900/70 hover:bg-blue-800 text-white font-bold text-sm border border-blue-400/40 cursor-pointer active:scale-95 transition flex items-center justify-center gap-1 shadow"
+                  className="flex-1 py-3 px-4 rounded-2xl bg-blue-900/70 hover:bg-blue-800 text-white font-bold text-sm border border-blue-400/40 cursor-pointer active:scale-95 transition flex items-center justify-center gap-1 shadow min-h-[46px]"
                 >
                   <Home className="w-4 h-4" />
                   Home
                 </button>
                 <button
                   onClick={() => startLevel(currentLevelIndex)}
-                  className="flex-1 py-3 px-4 rounded-2xl bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-400 text-white font-black text-sm shadow-lg border-2 border-white cursor-pointer active:scale-95 transition flex items-center justify-center gap-1"
+                  className="flex-1 py-3 px-4 rounded-2xl bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-400 text-white font-black text-sm shadow-lg border-2 border-white cursor-pointer active:scale-95 transition flex items-center justify-center gap-1 min-h-[46px]"
                 >
                   <RotateCcw className="w-4 h-4" />
                   Try Again
@@ -1716,9 +2020,12 @@ export default function App() {
         playerAvatarId={playerProfile.avatarId || 'kid_headphones'}
         playerTrophies={playerProfile.trophies}
         currentLevel={currentLevel}
+        opponentTitle={currentMatchup?.title}
+        opponentAvatarId={currentMatchup?.avatarId}
+        opponentDifficultyLabel={currentMatchup?.difficultyLabel}
         onFightStart={() => {
           setShowVersusModal(false);
-          startLevel(currentLevelIndex);
+          startLevel(currentLevelIndex, currentMatchup || undefined);
         }}
       />
 
@@ -1825,9 +2132,44 @@ export default function App() {
         <CoinRewardAnimation
           amount={coinAnimation.amount}
           reason={coinAnimation.reason}
-          onComplete={() => setCoinAnimation(null)}
+          onComplete={handleCloseCoinAnimation}
         />
       )}
+
+      {/* ======================================================== */}
+      {/* 17. SECTOR SELECTION MODAL (Royal Battle Realms Map)     */}
+      {/* ======================================================== */}
+      <SectorSelectionModal
+        isOpen={showSectorModal}
+        onClose={() => setShowSectorModal(false)}
+        playerProfile={playerProfile}
+        activeDeck={activeDeck}
+        selectedSectorIndex={currentLevelIndex}
+        onSelectSector={(idx) => setCurrentLevelIndex(idx)}
+        onStartBattleWithSector={(idx, exactMatchup) => {
+          setCurrentLevelIndex(idx);
+          setCurrentMatchup(exactMatchup);
+          setShowVersusModal(true);
+        }}
+      />
+
+      {/* ======================================================== */}
+      {/* 18. MATCHMAKING TELEMETRY & PROGRESSION DEBUG PANEL      */}
+      {/* ======================================================== */}
+      <MatchmakingDebugPanel
+        isOpen={showDebugPanel}
+        onClose={() => setShowDebugPanel(false)}
+        playerProfile={playerProfile}
+        activeDeck={activeDeck}
+        selectedSectorIndex={currentLevelIndex}
+        onUpdateProfile={(updated) => {
+          setPlayerProfile((prev) => {
+            const next = { ...prev, ...updated };
+            saveService.save({ playerProfile: next });
+            return next;
+          });
+        }}
+      />
     </div>
   );
 }

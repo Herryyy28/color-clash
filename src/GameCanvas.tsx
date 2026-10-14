@@ -1,6 +1,5 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 import { Unit, Projectile, Particle, FloatingText, Card, Team, Emote } from './types';
-import { sounds } from './audio';
 
 interface GameCanvasProps {
   grid: Team[][];
@@ -18,6 +17,28 @@ interface GameCanvasProps {
 export const COLS = 16;
 export const ROWS = 26;
 
+// Fantasy Kingdom Clash Material Palette
+const PALETTE = {
+  grass: '#79B957',
+  grassLight: '#B7DE78',
+  grassDark: '#5E9E3C',
+  dirt: '#A89F82',
+  stone: '#C8C7B9',
+  stoneDark: '#8F8E80',
+  stoneLight: '#E2E1D5',
+  arenaBg: '#E9E4D4',
+  blueTeam: '#2787F5',
+  blueTeamDark: '#174DB8',
+  blueTeamLight: '#60A5FA',
+  redTeam: '#F04452',
+  redTeamDark: '#B91C1C',
+  redTeamLight: '#FB7185',
+  goldAccent: '#FFC84A',
+  woodBrown: '#8B5A2B',
+  woodDark: '#5C3A1E',
+  woodLight: '#BA7A3D',
+};
+
 export const GameCanvas: React.FC<GameCanvasProps> = ({
   grid,
   units,
@@ -32,28 +53,44 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // Convert canvas pixel position to grid coordinates
-  const pixelToGrid = useCallback((canvasX: number, canvasY: number, width: number, height: number) => {
-    const paddingX = width * 0.04;
-    const paddingY = height * 0.02;
-    const arenaW = width - paddingX * 2;
-    const arenaH = height - paddingY * 2;
-
-    const cellW = arenaW / COLS;
-    const cellH = arenaH / ROWS;
-
-    const gx = Math.floor((canvasX - paddingX) / cellW);
-    const gy = Math.floor((canvasY - paddingY) / cellH);
+  // Calculate arena metrics ensuring strictly square, proportional tiles and centered framing
+  const getArenaMetrics = useCallback((width: number, height: number) => {
+    // Leave room around the grid for the lush fantasy kingdom environment (towers, grass, trees)
+    const maxW = width * 0.88;
+    const maxH = height * 0.92;
+    const cellSize = Math.min(maxW / COLS, maxH / ROWS);
+    const arenaW = cellSize * COLS;
+    const arenaH = cellSize * ROWS;
+    const paddingX = (width - arenaW) / 2;
+    const paddingY = (height - arenaH) / 2;
 
     return {
-      gx: Math.max(0, Math.min(COLS - 1, gx)),
-      gy: Math.max(0, Math.min(ROWS - 1, gy)),
-      cellW,
-      cellH,
+      cellSize,
+      cellW: cellSize,
+      cellH: cellSize,
+      arenaW,
+      arenaH,
       paddingX,
       paddingY,
     };
   }, []);
+
+  // Convert canvas pixel position to grid coordinates
+  const pixelToGrid = useCallback((canvasX: number, canvasY: number, width: number, height: number) => {
+    const { cellSize, paddingX, paddingY } = getArenaMetrics(width, height);
+
+    const gx = Math.floor((canvasX - paddingX) / cellSize);
+    const gy = Math.floor((canvasY - paddingY) / cellSize);
+
+    return {
+      gx: Math.max(0, Math.min(COLS - 1, gx)),
+      gy: Math.max(0, Math.min(ROWS - 1, gy)),
+      cellW: cellSize,
+      cellH: cellSize,
+      paddingX,
+      paddingY,
+    };
+  }, [getArenaMetrics]);
 
   // Main rendering loop
   useEffect(() => {
@@ -64,98 +101,307 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
     let animId: number;
 
-    const render = () => {
+    const render = (timestamp: number) => {
       const width = canvas.width;
       const height = canvas.height;
+      const { cellW, cellH, arenaW, arenaH, paddingX, paddingY } = getArenaMetrics(width, height);
 
       ctx.clearRect(0, 0, width, height);
 
-      // 1. Render Arena Outer Frame / Border (Exact match to reference white-beveled stadium card)
-      const paddingX = width * 0.04;
-      const paddingY = height * 0.02;
-      const arenaW = width - paddingX * 2;
-      const arenaH = height - paddingY * 2;
+      // ========================================================
+      // 1. SURROUNDING FANTASY KINGDOM TERRAIN (Lush Grass, Trees)
+      // ========================================================
 
-      const cellW = arenaW / COLS;
-      const cellH = arenaH / ROWS;
+      // Base lush green kingdom meadow
+      const grassGrad = ctx.createLinearGradient(0, 0, width, height);
+      grassGrad.addColorStop(0, PALETTE.grass);
+      grassGrad.addColorStop(0.5, '#6FA849');
+      grassGrad.addColorStop(1, PALETTE.grassDark);
+      ctx.fillStyle = grassGrad;
+      ctx.fillRect(0, 0, width, height);
 
-      // Outer bezel with white elevated rim and soft royal shadow
+      // Stylized light grass patches
+      ctx.fillStyle = PALETTE.grassLight;
+      ctx.globalAlpha = 0.35;
+      const patchSize = Math.max(20, Math.floor(cellW * 1.5));
+      for (let px = 6; px < width; px += patchSize * 2.2) {
+        for (let py = 6; py < height; py += patchSize * 2.5) {
+          ctx.beginPath();
+          ctx.ellipse(px, py, patchSize * 0.7, patchSize * 0.4, 0.2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // Small kingdom flowers (yellow, white, pink)
+      ctx.globalAlpha = 0.85;
+      const flowerPositions = [
+        { x: paddingX * 0.35, y: paddingY + 20, color: '#fef08a' },
+        { x: paddingX * 0.6, y: paddingY + 80, color: '#ffffff' },
+        { x: paddingX * 0.25, y: paddingY + arenaH - 40, color: '#f472b6' },
+        { x: width - paddingX * 0.4, y: paddingY + 30, color: '#ffffff' },
+        { x: width - paddingX * 0.5, y: paddingY + 120, color: '#fef08a' },
+        { x: width - paddingX * 0.3, y: paddingY + arenaH - 60, color: '#60a5fa' },
+      ];
+      flowerPositions.forEach((fl) => {
+        ctx.fillStyle = fl.color;
+        ctx.beginPath();
+        ctx.arc(fl.x, fl.y, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = PALETTE.goldAccent;
+        ctx.beginPath();
+        ctx.arc(fl.x, fl.y, 1, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Decorative stylized trees (Clash of Clans puffy tree canopies)
+      const renderTree = (tx: number, ty: number, radius: number) => {
+        ctx.save();
+        // Tree shadow
+        ctx.fillStyle = 'rgba(20, 45, 15, 0.45)';
+        ctx.beginPath();
+        ctx.ellipse(tx + 4, ty + 6, radius * 1.05, radius * 0.65, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Tree trunk
+        ctx.fillStyle = PALETTE.woodDark;
+        ctx.fillRect(tx - 3, ty + radius * 0.3, 6, radius * 0.5);
+
+        // Tiered puffy foliage
+        ctx.fillStyle = '#4E882B';
+        ctx.beginPath();
+        ctx.arc(tx, ty, radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = PALETTE.grass;
+        ctx.beginPath();
+        ctx.arc(tx - radius * 0.2, ty - radius * 0.2, radius * 0.75, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = PALETTE.grassLight;
+        ctx.beginPath();
+        ctx.arc(tx - radius * 0.35, ty - radius * 0.35, radius * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      };
+
+      const treeR = Math.max(12, Math.floor(cellW * 0.85));
+      renderTree(paddingX * 0.45, paddingY * 0.55, treeR);
+      renderTree(width - paddingX * 0.45, paddingY * 0.55, treeR);
+      renderTree(paddingX * 0.45, height - paddingY * 0.55, treeR);
+      renderTree(width - paddingX * 0.45, height - paddingY * 0.55, treeR);
+
+      // Wooden fencing along the left and right meadow borders
+      ctx.fillStyle = PALETTE.woodBrown;
+      ctx.strokeStyle = PALETTE.woodDark;
+      ctx.lineWidth = 1;
+      const fenceXLeft = paddingX * 0.85;
+      const fenceXRight = width - paddingX * 0.85;
+      for (let fy = paddingY + 25; fy < paddingY + arenaH - 25; fy += cellH * 3) {
+        // Left post & rails
+        ctx.fillRect(fenceXLeft - 2, fy, 4, 14);
+        ctx.strokeRect(fenceXLeft - 2, fy, 4, 14);
+        ctx.fillRect(fenceXLeft - 2, fy + 3, paddingX * 0.15, 2.5);
+
+        // Right post & rails
+        ctx.fillRect(fenceXRight - 2, fy, 4, 14);
+        ctx.strokeRect(fenceXRight - 2, fy, 4, 14);
+        ctx.fillRect(fenceXRight - paddingX * 0.15, fy + 3, paddingX * 0.15, 2.5);
+      }
+
+      ctx.globalAlpha = 1.0;
+
+      // ========================================================
+      // 2. DEFENSIVE CORNER WATCHTOWERS (Red Top / Blue Bottom)
+      // ========================================================
+      const renderWatchtower = (wx: number, wy: number, isRed: boolean) => {
+        ctx.save();
+        const tW = Math.max(16, Math.floor(cellW * 1.3));
+        const tH = Math.max(22, Math.floor(cellH * 1.6));
+
+        // Tower shadow
+        ctx.fillStyle = 'rgba(15, 35, 20, 0.4)';
+        ctx.beginPath();
+        ctx.ellipse(wx, wy + tH * 0.5, tW * 0.8, tW * 0.45, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Stone base
+        ctx.fillStyle = PALETTE.stoneDark;
+        ctx.beginPath();
+        ctx.roundRect(wx - tW * 0.45, wy - tH * 0.4, tW * 0.9, tH * 0.8, 3);
+        ctx.fill();
+        ctx.fillStyle = PALETTE.stone;
+        ctx.fillRect(wx - tW * 0.4, wy - tH * 0.35, tW * 0.8, tH * 0.7);
+
+        // Wooden battlement floor
+        ctx.fillStyle = PALETTE.woodLight;
+        ctx.fillRect(wx - tW * 0.5, wy - tH * 0.45, tW, 4);
+
+        // Conical shingle roof
+        ctx.fillStyle = isRed ? PALETTE.redTeamDark : PALETTE.blueTeamDark;
+        ctx.beginPath();
+        ctx.moveTo(wx, wy - tH * 0.9);
+        ctx.lineTo(wx + tW * 0.55, wy - tH * 0.45);
+        ctx.lineTo(wx - tW * 0.55, wy - tH * 0.45);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = isRed ? PALETTE.redTeam : PALETTE.blueTeam;
+        ctx.beginPath();
+        ctx.moveTo(wx, wy - tH * 0.9);
+        ctx.lineTo(wx + tW * 0.4, wy - tH * 0.45);
+        ctx.lineTo(wx - tW * 0.2, wy - tH * 0.45);
+        ctx.closePath();
+        ctx.fill();
+
+        // Team Flag Pennant
+        const flagWave = Math.sin(timestamp * 0.005 + wx) * 3;
+        ctx.fillStyle = isRed ? PALETTE.redTeam : PALETTE.blueTeam;
+        ctx.beginPath();
+        ctx.moveTo(wx, wy - tH * 0.9);
+        ctx.lineTo(wx + 10 + flagWave, wy - tH * 0.85);
+        ctx.lineTo(wx, wy - tH * 0.8);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.restore();
+      };
+
+      // Top Red Watchtowers
+      renderWatchtower(paddingX - 4, paddingY - 2, true);
+      renderWatchtower(paddingX + arenaW + 4, paddingY - 2, true);
+
+      // Bottom Blue Watchtowers
+      renderWatchtower(paddingX - 4, paddingY + arenaH + 2, false);
+      renderWatchtower(paddingX + arenaW + 4, paddingY + arenaH + 2, false);
+
+      // ========================================================
+      // 3. ELEVATED STONE RAMPART & ARENA BORDER
+      // ========================================================
+
+      // Outer Stone Rampart Shadow
       ctx.save();
-      ctx.shadowColor = 'rgba(12, 36, 95, 0.5)';
-      ctx.shadowBlur = 20;
+      ctx.shadowColor = 'rgba(20, 35, 10, 0.55)';
+      ctx.shadowBlur = 16;
       ctx.shadowOffsetY = 6;
-      ctx.fillStyle = '#ffffff';
+
+      // Heavy Chiseled Stone Border
+      ctx.fillStyle = PALETTE.stoneDark;
       ctx.beginPath();
-      ctx.roundRect(paddingX - 4, paddingY - 4, arenaW + 8, arenaH + 8, 14);
+      ctx.roundRect(paddingX - 6, paddingY - 6, arenaW + 12, arenaH + 12, 10);
       ctx.fill();
       ctx.restore();
 
-      // Inner stadium background (Color Clash royal stadium navy)
-      ctx.fillStyle = '#0d2d74';
+      // Stone Wall Face with bevel
+      ctx.fillStyle = PALETTE.stone;
       ctx.beginPath();
-      ctx.roundRect(paddingX, paddingY, arenaW, arenaH, 10);
+      ctx.roundRect(paddingX - 5, paddingY - 5, arenaW + 10, arenaH + 10, 8);
       ctx.fill();
 
-      // 2. Render Voxel Grid Cells
+      // Golden Corner Studs / Rivets
+      const rivetR = 2.5;
+      const cornerOffsets = [
+        { x: paddingX - 2, y: paddingY - 2 },
+        { x: paddingX + arenaW + 2, y: paddingY - 2 },
+        { x: paddingX - 2, y: paddingY + arenaH + 2 },
+        { x: paddingX + arenaW + 2, y: paddingY + arenaH + 2 },
+      ];
+      ctx.fillStyle = PALETTE.goldAccent;
+      cornerOffsets.forEach((co) => {
+        ctx.beginPath();
+        ctx.arc(co.x, co.y, rivetR, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = PALETTE.woodDark;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      });
+
+      // Inner Arena Flagstone Base
+      ctx.fillStyle = PALETTE.arenaBg;
+      ctx.beginPath();
+      ctx.roundRect(paddingX, paddingY, arenaW, arenaH, 5);
+      ctx.fill();
+
+      // ========================================================
+      // 4. 16x26 TERRITORY CAPTURE FLAGSTONES (Red vs Blue Kingdom)
+      // ========================================================
       for (let r = 0; r < ROWS; r++) {
         for (let c = 0; c < COLS; c++) {
           const owner = grid[r]?.[c] ?? 'neutral';
           const cellX = paddingX + c * cellW;
           const cellY = paddingY + r * cellH;
 
-          // Colors matching the video: vibrant royal blue, ruby red, and crisp neutral stadium tiles
-          let fillColor = '#143d8d';
-          let borderColor = '#1e52b8';
-          let highlightColor = '#2e6de0';
+          // Stylized Clash-style flagstone colors
+          let topColor = PALETTE.arenaBg;
+          let shadowColor = PALETTE.stone;
+          let highlightColor = PALETTE.stoneLight;
 
           if (owner === 'blue') {
-            fillColor = '#0284c7'; // vibrant azure blue
-            borderColor = '#0369a1';
-            highlightColor = '#38bdf8';
+            topColor = PALETTE.blueTeam;
+            shadowColor = PALETTE.blueTeamDark;
+            highlightColor = PALETTE.blueTeamLight;
           } else if (owner === 'red') {
-            fillColor = '#e11d48'; // vibrant ruby red
-            borderColor = '#be123c';
-            highlightColor = '#fb7185';
+            topColor = PALETTE.redTeam;
+            shadowColor = PALETTE.redTeamDark;
+            highlightColor = PALETTE.redTeamLight;
           }
 
-          // 3D Voxel Extruded Base (Bottom shadow bevel)
-          const inset = 0.8;
-          ctx.fillStyle = borderColor;
+          const inset = 0.75;
+          // 3D Flagstone Chiseled Bottom Shadow
+          ctx.fillStyle = shadowColor;
           ctx.beginPath();
-          ctx.roundRect(cellX + inset, cellY + inset + 1.5, cellW - inset * 2, cellH - inset * 2, 2.5);
+          ctx.roundRect(cellX + inset, cellY + inset + 1.2, cellW - inset * 2, cellH - inset * 2, 2);
           ctx.fill();
 
-          // Voxel Top Face
-          ctx.fillStyle = fillColor;
+          // 3D Flagstone Top Face
+          ctx.fillStyle = topColor;
           ctx.beginPath();
-          ctx.roundRect(cellX + inset, cellY + inset, cellW - inset * 2, cellH - inset * 2 - 1, 2.5);
+          ctx.roundRect(cellX + inset, cellY + inset, cellW - inset * 2, cellH - inset * 2 - 0.8, 2);
           ctx.fill();
 
-          // 3D Specular Top-Left Highlight
+          // Specular Sunlit Bevel
           ctx.fillStyle = highlightColor;
-          ctx.globalAlpha = 0.45;
-          ctx.fillRect(cellX + inset + 1, cellY + inset + 0.8, cellW - inset * 2 - 2, 1.6);
+          ctx.globalAlpha = 0.4;
+          ctx.fillRect(cellX + inset + 1, cellY + inset + 0.5, cellW - inset * 2 - 2, 1.2);
           ctx.globalAlpha = 1.0;
 
-          // Subtle grid outline
-          ctx.strokeStyle = borderColor;
-          ctx.lineWidth = 0.5;
-          ctx.strokeRect(cellX + inset, cellY + inset, cellW - inset * 2, cellH - inset * 2 - 1);
+          // Flagstone Mortar Border
+          ctx.strokeStyle = shadowColor;
+          ctx.lineWidth = 0.4;
+          ctx.strokeRect(cellX + inset, cellY + inset, cellW - inset * 2, cellH - inset * 2 - 0.8);
         }
       }
 
-      // Middle dividing line pulse
+      // Middle Dividing River / Stone Bridge Boundary
       const midY = paddingY + (ROWS / 2) * cellH;
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
-      ctx.setLineDash([4, 4]);
-      ctx.lineWidth = 1.5;
+      ctx.save();
+      ctx.strokeStyle = PALETTE.goldAccent;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 6]);
       ctx.beginPath();
       ctx.moveTo(paddingX, midY);
       ctx.lineTo(paddingX + arenaW, midY);
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // 3. Render Aiming Trajectory / Placement Guide if Dragging
+      // Center River Crest / Bridge Keystone
+      ctx.fillStyle = PALETTE.stone;
+      ctx.strokeStyle = PALETTE.goldAccent;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(paddingX + arenaW / 2, midY, cellW * 0.7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = PALETTE.goldAccent;
+      ctx.font = `${Math.max(10, Math.floor(cellW * 0.7))}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('⚔️', paddingX + arenaW / 2, midY);
+      ctx.restore();
+
+      // ========================================================
+      // 5. AIMING TRAJECTORY & PLACEMENT GUIDE
+      // ========================================================
       if (draggedCard && dragPos) {
         const { gx, gy } = pixelToGrid(dragPos.x, dragPos.y, width, height);
         const hoverX = paddingX + (gx + 0.5) * cellW;
@@ -166,435 +412,346 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         const isValidPlacement = isSaw ? gy >= ROWS / 2 : isBlueTerritory;
 
         if (isSaw) {
-          // Saw Trajectory Ray (exact matching from video: white glowing dashed ray pointing up with arrow!)
+          // Whirlwind Blade Trajectory Guide
           ctx.save();
           const startRayY = hoverY;
-          const endRayY = paddingY + 10;
+          const endRayY = paddingY + 6;
 
-          // Glowing corridor
           const grad = ctx.createLinearGradient(0, startRayY, 0, endRayY);
-          grad.addColorStop(0, 'rgba(56, 189, 248, 0.45)');
+          grad.addColorStop(0, 'rgba(255, 200, 74, 0.45)');
           grad.addColorStop(1, 'rgba(255, 255, 255, 0.1)');
           ctx.fillStyle = grad;
-          ctx.fillRect(hoverX - cellW * 0.9, endRayY, cellW * 1.8, startRayY - endRayY);
+          ctx.fillRect(hoverX - cellW * 0.8, endRayY, cellW * 1.6, startRayY - endRayY);
 
-          // Center trajectory dashed line
           ctx.strokeStyle = '#ffffff';
           ctx.lineWidth = 2.5;
-          ctx.setLineDash([8, 8]);
-          ctx.lineDashOffset = -(Date.now() / 25) % 16;
+          ctx.setLineDash([8, 6]);
+          ctx.lineDashOffset = -(timestamp * 0.04) % 14;
           ctx.beginPath();
           ctx.moveTo(hoverX, startRayY);
           ctx.lineTo(hoverX, endRayY);
           ctx.stroke();
           ctx.setLineDash([]);
 
-          // Arrowhead pointing forward
-          ctx.fillStyle = '#ffffff';
+          // Arrowhead
+          ctx.fillStyle = PALETTE.goldAccent;
           ctx.beginPath();
           ctx.moveTo(hoverX, endRayY - 8);
-          ctx.lineTo(hoverX - 9, endRayY + 10);
-          ctx.lineTo(hoverX + 9, endRayY + 10);
+          ctx.lineTo(hoverX - 8, endRayY + 8);
+          ctx.lineTo(hoverX + 8, endRayY + 8);
           ctx.closePath();
           ctx.fill();
 
-          // Saw preview disk
+          // Blade Preview Disc
           ctx.beginPath();
-          ctx.arc(hoverX, hoverY, cellW * 0.9, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(245, 158, 11, 0.6)';
+          ctx.arc(hoverX, hoverY, cellW * 0.85, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(255, 200, 74, 0.6)';
           ctx.fill();
-          ctx.strokeStyle = '#f59e0b';
+          ctx.strokeStyle = PALETTE.goldAccent;
           ctx.lineWidth = 2;
           ctx.stroke();
           ctx.restore();
         } else {
-          // Range & Placement Ring
+          // Castle Range Reticle
           ctx.save();
           const rangePx = draggedCard.range * cellW;
           ctx.beginPath();
           ctx.arc(hoverX, hoverY, rangePx, 0, Math.PI * 2);
-          ctx.fillStyle = isValidPlacement ? 'rgba(56, 189, 248, 0.12)' : 'rgba(239, 68, 68, 0.12)';
+          ctx.fillStyle = isValidPlacement ? 'rgba(39, 135, 245, 0.12)' : 'rgba(240, 68, 82, 0.12)';
           ctx.fill();
-          ctx.strokeStyle = isValidPlacement ? 'rgba(56, 189, 248, 0.6)' : 'rgba(239, 68, 68, 0.6)';
+          ctx.strokeStyle = isValidPlacement ? PALETTE.blueTeam : PALETTE.redTeam;
           ctx.lineWidth = 1.5;
-          ctx.setLineDash([6, 6]);
+          ctx.setLineDash([6, 5]);
           ctx.stroke();
           ctx.setLineDash([]);
 
-          // Center target reticle
+          // Center deployment marker
           ctx.beginPath();
-          ctx.arc(hoverX, hoverY, cellW * 0.8, 0, Math.PI * 2);
-          ctx.fillStyle = isValidPlacement ? 'rgba(14, 165, 233, 0.4)' : 'rgba(239, 68, 68, 0.4)';
+          ctx.arc(hoverX, hoverY, cellW * 0.75, 0, Math.PI * 2);
+          ctx.fillStyle = isValidPlacement ? 'rgba(39, 135, 245, 0.4)' : 'rgba(240, 68, 82, 0.4)';
           ctx.fill();
-          ctx.strokeStyle = isValidPlacement ? '#38bdf8' : '#ef4444';
+          ctx.strokeStyle = isValidPlacement ? '#ffffff' : '#ffffff';
           ctx.lineWidth = 2;
           ctx.stroke();
           ctx.restore();
         }
       }
 
-      // 4. Render Units (Turrets, Cannons, Blasters)
+      // ========================================================
+      // 6. TOY-LIKE FANTASY UNITS & SIEGE ENGINES
+      // ========================================================
       units.forEach((unit) => {
         const uX = paddingX + (unit.x + 0.5) * cellW;
         const uY = paddingY + (unit.y + 0.5) * cellH;
         const isBlue = unit.team === 'blue';
-        const primaryColor = isBlue ? '#0284c7' : '#e11d48';
-        const darkColor = isBlue ? '#1e40af' : '#991b1b';
-        const accentColor = isBlue ? '#38bdf8' : '#fb7185';
+        const primaryColor = isBlue ? PALETTE.blueTeam : PALETTE.redTeam;
+        const darkColor = isBlue ? PALETTE.blueTeamDark : PALETTE.redTeamDark;
+        const accentColor = isBlue ? PALETTE.blueTeamLight : PALETTE.redTeamLight;
 
         ctx.save();
         ctx.translate(uX, uY);
 
-        // Unit Drop Shadow (Soft navy tint)
-        ctx.fillStyle = 'rgba(12, 36, 95, 0.35)';
+        // Unit Ground Shadow
+        ctx.fillStyle = 'rgba(15, 30, 20, 0.35)';
         ctx.beginPath();
-        ctx.ellipse(0, cellH * 0.35, cellW * 0.75, cellH * 0.4, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, cellH * 0.35, cellW * 0.7, cellH * 0.38, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Base Pedestal
+        // Medieval Stone & Timber Pedestal
+        ctx.fillStyle = PALETTE.woodDark;
+        ctx.beginPath();
+        ctx.roundRect(-cellW * 0.6, -cellH * 0.55, cellW * 1.2, cellH * 1.1, 4);
+        ctx.fill();
+
         ctx.fillStyle = darkColor;
         ctx.beginPath();
-        ctx.roundRect(-cellW * 0.65, -cellH * 0.6, cellW * 1.3, cellH * 1.2, 5);
+        ctx.roundRect(-cellW * 0.55, -cellH * 0.5, cellW * 1.1, cellH * 1.0, 3);
         ctx.fill();
-        ctx.strokeStyle = primaryColor;
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = PALETTE.goldAccent;
+        ctx.lineWidth = 1.5;
         ctx.stroke();
 
-        // Inner glowing ring
+        // Inner team crest ring
         ctx.beginPath();
-        ctx.arc(0, 0, cellW * 0.45, 0, Math.PI * 2);
+        ctx.arc(0, 0, cellW * 0.4, 0, Math.PI * 2);
         ctx.fillStyle = primaryColor;
         ctx.fill();
 
-        // Rotating Barrel / Turret Head
+        // Turret / Weapon Head with Aim Rotation
         ctx.save();
         ctx.rotate(unit.angle);
 
-        // Barrel recoil offset
-        const recoilOffset = -unit.barrelRecoil * 5;
+        const recoil = -unit.barrelRecoil * 5;
 
+        // Custom Toy-Like Fantasy Weapon Silhouettes
         if (unit.cardId === 'cannon') {
-          // Thick mortar barrel with red/blue muzzle
-          ctx.fillStyle = '#334155';
-          ctx.fillRect(-cellW * 0.2, recoilOffset, cellW * 0.4, cellH * 0.75);
-          // Muzzle ring
+          // Kingdom Catapult / Heavy Mortar (Wooden arm with stone throwing cup)
+          ctx.fillStyle = PALETTE.woodLight;
+          ctx.fillRect(-cellW * 0.16, recoil, cellW * 0.32, cellH * 0.75);
+          ctx.strokeStyle = PALETTE.woodDark;
+          ctx.lineWidth = 1;
+          ctx.strokeRect(-cellW * 0.16, recoil, cellW * 0.32, cellH * 0.75);
+
+          // Boulder cup
           ctx.fillStyle = accentColor;
-          ctx.fillRect(-cellW * 0.22, recoilOffset + cellH * 0.65, cellW * 0.44, cellH * 0.15);
-        } else if (unit.cardId === 'blaster' || unit.cardId === 'gatling') {
-          // Multi-barrel setup
-          ctx.fillStyle = '#475569';
-          ctx.fillRect(-cellW * 0.25, recoilOffset, cellW * 0.18, cellH * 0.65);
-          ctx.fillRect(cellW * 0.07, recoilOffset, cellW * 0.18, cellH * 0.65);
-          ctx.fillStyle = accentColor;
-          ctx.fillRect(-cellW * 0.25, recoilOffset + cellH * 0.55, cellW * 0.18, 3);
-          ctx.fillRect(cellW * 0.07, recoilOffset + cellH * 0.55, cellW * 0.18, 3);
-        } else if (unit.cardId === 'mortar') {
-          // Wide funnel mortar
-          ctx.fillStyle = '#1e293b';
           ctx.beginPath();
-          ctx.moveTo(-cellW * 0.15, recoilOffset);
-          ctx.lineTo(-cellW * 0.35, recoilOffset + cellH * 0.75);
-          ctx.lineTo(cellW * 0.35, recoilOffset + cellH * 0.75);
-          ctx.lineTo(cellW * 0.15, recoilOffset);
-          ctx.closePath();
+          ctx.arc(0, recoil + cellH * 0.65, cellW * 0.22, 0, Math.PI * 2);
           ctx.fill();
-          ctx.strokeStyle = accentColor;
+          ctx.strokeStyle = PALETTE.goldAccent;
           ctx.lineWidth = 1.5;
           ctx.stroke();
-        } else if (unit.cardId === 'roller') {
-          // White tank chassis with treads and front roller (from frame 71.1s)
-          ctx.fillStyle = '#1e293b';
-          ctx.fillRect(-cellW * 0.52, -cellH * 0.55, cellW * 0.2, cellH * 1.1);
-          ctx.fillRect(cellW * 0.32, -cellH * 0.55, cellW * 0.2, cellH * 1.1);
-          ctx.fillStyle = '#f8fafc';
+        } else if (unit.cardId === 'blaster' || unit.cardId === 'gatling') {
+          // Royal Ranger Crossbow / Volley Ballista (Curved wooden limbs)
+          ctx.fillStyle = PALETTE.woodBrown;
           ctx.beginPath();
-          ctx.roundRect(-cellW * 0.36, -cellH * 0.5, cellW * 0.72, cellH * 1.0, 3);
+          ctx.arc(0, recoil + cellH * 0.35, cellW * 0.45, Math.PI * 0.9, Math.PI * 0.1, true);
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = PALETTE.woodLight;
+          ctx.stroke();
+
+          // Golden center bowstock
+          ctx.fillStyle = PALETTE.goldAccent;
+          ctx.fillRect(-cellW * 0.12, recoil, cellW * 0.24, cellH * 0.65);
+
+          // Bowstring
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.moveTo(-cellW * 0.38, recoil + cellH * 0.45);
+          ctx.lineTo(0, recoil + cellH * 0.15);
+          ctx.lineTo(cellW * 0.38, recoil + cellH * 0.45);
+          ctx.stroke();
+        } else if (unit.cardId === 'mortar') {
+          // Alchemist Trebuchet (Stone Crucible)
+          ctx.fillStyle = PALETTE.stoneDark;
+          ctx.beginPath();
+          ctx.moveTo(-cellW * 0.18, recoil);
+          ctx.lineTo(-cellW * 0.32, recoil + cellH * 0.75);
+          ctx.lineTo(cellW * 0.32, recoil + cellH * 0.75);
+          ctx.lineTo(cellW * 0.18, recoil);
+          ctx.closePath();
           ctx.fill();
+          ctx.strokeStyle = PALETTE.goldAccent;
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+
+          // Glowing potion liquid inside
           ctx.fillStyle = accentColor;
-          ctx.fillRect(-cellW * 0.44, -cellH * 0.7, cellW * 0.88, cellH * 0.25);
-          ctx.fillStyle = '#475569';
-          ctx.fillRect(-cellW * 0.12, recoilOffset, cellW * 0.24, cellH * 0.55);
+          ctx.beginPath();
+          ctx.ellipse(0, recoil + cellH * 0.65, cellW * 0.22, cellH * 0.1, 0, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (unit.cardId === 'laser') {
+          // Arcane Monolith / Floating Magic Crystal Spire
+          ctx.fillStyle = PALETTE.stoneLight;
+          ctx.beginPath();
+          ctx.moveTo(0, recoil + cellH * 0.8);
+          ctx.lineTo(cellW * 0.2, recoil);
+          ctx.lineTo(0, recoil + cellH * 0.2);
+          ctx.lineTo(-cellW * 0.2, recoil);
+          ctx.closePath();
+          ctx.fill();
+          ctx.strokeStyle = PALETTE.goldAccent;
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+
+          // Floating crystal gem
+          ctx.fillStyle = '#f43f5e';
+          ctx.beginPath();
+          ctx.arc(0, recoil + cellH * 0.4, cellW * 0.16, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (unit.cardId === 'roller') {
+          // Armored Siege Battering Ram
+          ctx.fillStyle = PALETTE.woodDark;
+          ctx.fillRect(-cellW * 0.48, -cellH * 0.5, cellW * 0.96, cellH * 0.9);
+          // Iron corner plates
+          ctx.fillStyle = PALETTE.stoneDark;
+          ctx.fillRect(-cellW * 0.52, -cellH * 0.55, cellW * 0.25, cellH * 0.25);
+          ctx.fillRect(cellW * 0.27, -cellH * 0.55, cellW * 0.25, cellH * 0.25);
+          // Front spiked roller
+          ctx.fillStyle = accentColor;
+          ctx.fillRect(-cellW * 0.45, -cellH * 0.75, cellW * 0.9, cellH * 0.25);
         } else {
-          // Standard turret barrel
-          ctx.fillStyle = '#334155';
-          ctx.fillRect(-cellW * 0.15, recoilOffset, cellW * 0.3, cellH * 0.7);
+          // Standard Siege Turret
+          ctx.fillStyle = PALETTE.woodLight;
+          ctx.fillRect(-cellW * 0.15, recoil, cellW * 0.3, cellH * 0.7);
         }
 
-        // Center turret dome
+        // Center knight helmet dome
         ctx.beginPath();
-        ctx.arc(0, 0, cellW * 0.32, 0, Math.PI * 2);
+        ctx.arc(0, 0, cellW * 0.28, 0, Math.PI * 2);
         ctx.fillStyle = accentColor;
         ctx.fill();
         ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 1.2;
+        ctx.lineWidth = 1.5;
         ctx.stroke();
 
-        ctx.restore(); // restore angle rotation
+        ctx.restore(); // restore rotation
 
-        // Render Shield Bubble if unit has active Shielding passive
+        // Active Shield Bubble (Fantasy Arcane Ward)
         if (unit.shieldHp > 0) {
-          const pulse = Math.sin(Date.now() / 180) * 0.12 + 0.88;
+          const pulse = Math.sin(timestamp * 0.006) * 0.08 + 0.92;
           ctx.beginPath();
-          ctx.arc(0, 0, cellW * 0.72 * pulse, 0, Math.PI * 2);
-          ctx.fillStyle = isBlue ? 'rgba(56, 189, 248, 0.18)' : 'rgba(251, 113, 133, 0.18)';
+          ctx.arc(0, 0, cellW * 0.7 * pulse, 0, Math.PI * 2);
+          ctx.fillStyle = isBlue ? 'rgba(96, 165, 250, 0.2)' : 'rgba(251, 113, 133, 0.2)';
           ctx.fill();
-          ctx.strokeStyle = isBlue ? '#38bdf8' : '#fb7185';
+          ctx.strokeStyle = isBlue ? PALETTE.blueTeamLight : PALETTE.redTeamLight;
           ctx.lineWidth = 2;
-          ctx.setLineDash([5, 3]);
-          ctx.lineDashOffset = -(Date.now() / 30) % 8;
+          ctx.setLineDash([6, 3]);
           ctx.stroke();
           ctx.setLineDash([]);
         }
 
-        // Render Speed Boost wind streaks if unit has Speed Boost / Surge passive
+        // Speed Haste Magic Aura
         if (unit.passive?.type === 'speed_boost' || unit.passive?.type === 'territory_surge') {
-          ctx.save();
-          ctx.strokeStyle = 'rgba(250, 204, 21, 0.7)';
+          ctx.strokeStyle = PALETTE.goldAccent;
           ctx.lineWidth = 1.6;
-          const streakOffset = (Date.now() / 35) % (cellH * 0.6);
+          const streakOffset = (timestamp * 0.04) % (cellH * 0.6);
           ctx.beginPath();
-          ctx.moveTo(-cellW * 0.38, cellH * 0.4 - streakOffset);
-          ctx.lineTo(-cellW * 0.38, cellH * 0.7 - streakOffset);
-          ctx.moveTo(cellW * 0.38, cellH * 0.4 - streakOffset);
-          ctx.lineTo(cellW * 0.38, cellH * 0.7 - streakOffset);
+          ctx.moveTo(-cellW * 0.35, cellH * 0.3 - streakOffset);
+          ctx.lineTo(-cellW * 0.35, cellH * 0.6 - streakOffset);
+          ctx.moveTo(cellW * 0.35, cellH * 0.3 - streakOffset);
+          ctx.lineTo(cellW * 0.35, cellH * 0.6 - streakOffset);
           ctx.stroke();
-          ctx.restore();
         }
 
-        // Passive Ability Icon Badge at top (e.g. 🛡️ Shield, ⚡ Speed Boost, 💨 Surge)
+        // Passive Perk Crest Badge
         if (unit.passive) {
-          const badgeY = -cellH * 0.75;
+          const badgeY = -cellH * 0.72;
           ctx.fillStyle = '#0f172a';
           ctx.beginPath();
-          ctx.arc(0, badgeY, cellH * 0.26, 0, Math.PI * 2);
+          ctx.arc(0, badgeY, cellH * 0.25, 0, Math.PI * 2);
           ctx.fill();
-          ctx.strokeStyle = unit.shieldHp > 0 ? '#38bdf8' : '#f59e0b';
+          ctx.strokeStyle = PALETTE.goldAccent;
           ctx.lineWidth = 1.2;
           ctx.stroke();
 
-          ctx.font = `${Math.max(9, Math.floor(cellH * 0.28))}px sans-serif`;
+          ctx.font = `${Math.max(9, Math.floor(cellH * 0.26))}px sans-serif`;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           ctx.fillText(unit.passive.icon, 0, badgeY + 0.5);
         }
 
-        // HP & Shield Bars under unit
+        // Health Bar (Chiseled Stone & Emerald Fill)
         const hpPercent = Math.max(0, unit.hp / unit.maxHp);
-        const hpBarW = cellW * 1.1;
+        const hpBarW = cellW * 1.05;
         const hpBarH = 3.5;
-        const hpBarY = cellH * 0.76;
+        const hpBarY = cellH * 0.74;
 
-        // Passive Ability Dynamic Icon directly above the Health Bar (with grow/shrink pulse)
-        if (unit.passive) {
-          const isShieldActive = unit.shieldHp > 0;
-          const isSpeedActive = unit.passive.type === 'speed_boost' || unit.passive.type === 'territory_surge';
-          const isOvercharge = unit.passive.type === 'rapid_overcharge';
-
-          if (isShieldActive || isSpeedActive || isOvercharge) {
-            // Exact icons specified by user: shield 🛡️ for shielding, wing 🪽 for speed boost
-            const icon = isShieldActive ? '🛡️' : isSpeedActive ? '🪽' : '🔋';
-            const subtext = isShieldActive ? `${Math.round(unit.shieldHp)}` : 'SPEED';
-            const auraColor = isShieldActive ? '#38bdf8' : isSpeedActive ? '#facc15' : '#c084fc';
-            const auraBg = isShieldActive ? 'rgba(7, 39, 63, 0.95)' : isSpeedActive ? 'rgba(66, 32, 6, 0.95)' : 'rgba(59, 7, 100, 0.95)';
-
-            // Dynamic grow & shrink scale matching 'animate-ability-pulse'
-            const pulseScale = 1.0 + Math.sin(Date.now() / 190) * 0.16;
-            const badgeY = hpBarY - (isShieldActive ? 13 : 9.5);
-
-            ctx.save();
-            ctx.translate(0, badgeY);
-            ctx.scale(pulseScale, pulseScale);
-
-            // Glowing halo drop shadow
-            ctx.shadowColor = auraColor;
-            ctx.shadowBlur = 9;
-
-            // Medallion pill badge directly over health bar
-            const pillW = cellW * 0.92;
-            const pillH = 9;
-            ctx.fillStyle = auraBg;
-            ctx.beginPath();
-            ctx.roundRect(-pillW / 2, -pillH / 2, pillW, pillH, 4.5);
-            ctx.fill();
-            ctx.strokeStyle = auraColor;
-            ctx.lineWidth = 1.3;
-            ctx.stroke();
-
-            // Render shield or wing icon + stat text
-            ctx.font = `bold ${Math.max(7.5, Math.floor(cellH * 0.23))}px Fredoka, sans-serif`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillStyle = auraColor;
-            ctx.fillText(`${icon} ${subtext}`, 0, 0.5);
-
-            ctx.restore();
-          }
-        }
-
-        // Slim Shield Bar (Cyan) if shielding structure
-        if (unit.maxShieldHp > 0 && unit.shieldHp > 0) {
-          const shieldPercent = Math.max(0, Math.min(1, unit.shieldHp / unit.maxShieldHp));
-          const shieldBarY = hpBarY - 4.5;
-          ctx.fillStyle = 'rgba(10, 32, 85, 0.85)';
-          ctx.fillRect(-hpBarW / 2, shieldBarY, hpBarW, 2.5);
-          ctx.fillStyle = '#38bdf8';
-          ctx.fillRect(-hpBarW / 2, shieldBarY, hpBarW * shieldPercent, 2.5);
-        }
-
-        // Main Health Bar (Green for Blue, Red for Red)
-        ctx.fillStyle = 'rgba(10, 32, 85, 0.85)';
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
         ctx.fillRect(-hpBarW / 2, hpBarY, hpBarW, hpBarH);
-        ctx.fillStyle = isBlue ? '#22c55e' : '#ef4444';
+
+        ctx.fillStyle = hpPercent > 0.4 ? '#22c55e' : '#ef4444';
         ctx.fillRect(-hpBarW / 2, hpBarY, hpBarW * hpPercent, hpBarH);
-
-        // Small, color-coded level label (e.g., 'Lv. 3') below the unit icon on the battlefield
-        const lvl = unit.level || 1;
-        let lvlBg = 'rgba(16, 46, 115, 0.92)';
-        let lvlBorder = '#94a3b8';
-        let lvlText = '#e2e8f0';
-
-        if (lvl >= 5) {
-          // Gold / Legendary tier
-          lvlBg = 'rgba(120, 53, 15, 0.92)';
-          lvlBorder = '#f59e0b';
-          lvlText = '#fef08a';
-        } else if (lvl >= 4) {
-          // Purple / Epic tier
-          lvlBg = 'rgba(88, 28, 135, 0.92)';
-          lvlBorder = '#c084fc';
-          lvlText = '#f3e8ff';
-        } else if (lvl >= 3) {
-          // Neon Sky Blue (Player) / Ruby Red (Enemy) - Level 3
-          lvlBg = isBlue ? 'rgba(12, 74, 110, 0.92)' : 'rgba(136, 19, 55, 0.92)';
-          lvlBorder = isBlue ? '#38bdf8' : '#fb7185';
-          lvlText = isBlue ? '#7dd3fc' : '#fecdd3';
-        } else if (lvl === 2) {
-          // Emerald Green tier
-          lvlBg = 'rgba(6, 78, 59, 0.92)';
-          lvlBorder = '#34d399';
-          lvlText = '#a7f3d0';
-        } else {
-          // Silver / Slate tier - Level 1
-          lvlBg = 'rgba(30, 41, 59, 0.9)';
-          lvlBorder = '#94a3b8';
-          lvlText = '#cbd5e1';
-        }
-
-        const lvlLabelY = hpBarY + hpBarH + 2.5;
-        const lvlPillW = Math.max(24, cellW * 0.68);
-        const lvlPillH = Math.max(9, Math.floor(cellH * 0.28));
-
-        ctx.save();
-        ctx.fillStyle = lvlBg;
-        ctx.beginPath();
-        ctx.roundRect(-lvlPillW / 2, lvlLabelY, lvlPillW, lvlPillH, 3);
-        ctx.fill();
-
-        ctx.strokeStyle = lvlBorder;
-        ctx.lineWidth = 1.1;
-        ctx.stroke();
-
-        ctx.font = `800 ${Math.max(7.5, Math.floor(cellH * 0.21))}px Fredoka, Nunito, sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = lvlText;
-        ctx.fillText(`Lv. ${lvl}`, 0, lvlLabelY + lvlPillH / 2 + 0.5);
-        ctx.restore();
+        ctx.strokeStyle = PALETTE.woodDark;
+        ctx.lineWidth = 0.5;
+        ctx.strokeRect(-hpBarW / 2, hpBarY, hpBarW, hpBarH);
 
         ctx.restore();
       });
 
-      // 5. Render Projectiles (Cannonballs, Paint Pellets, Buzz Saws, Mortars)
+      // ========================================================
+      // 7. PROJECTILES (Enchanted Arrows, Boulders, Runes)
+      // ========================================================
       projectiles.forEach((p) => {
-        const pX = paddingX + (p.x + 0.5) * cellW;
-        const pY = paddingY + (p.y + 0.5) * cellH;
+        const px = paddingX + p.x * cellW;
+        const py = paddingY + p.y * cellH;
         const isBlue = p.team === 'blue';
-        const color = isBlue ? '#38bdf8' : '#fb7185';
-        const trailColor = isBlue ? 'rgba(56, 189, 248, 0.4)' : 'rgba(251, 113, 133, 0.4)';
+        const pColor = isBlue ? PALETTE.blueTeam : PALETTE.redTeam;
+        const glowColor = isBlue ? PALETTE.blueTeamLight : PALETTE.redTeamLight;
 
         ctx.save();
+        ctx.translate(px, py);
 
         if (p.type === 'saw') {
-          // Spinning Buzz Saw Disc
-          ctx.translate(pX, pY);
+          // Whirlwind Dwarven Razor Blade
           ctx.rotate(p.rotation);
-
-          // Glow halo
+          ctx.fillStyle = PALETTE.goldAccent;
           ctx.beginPath();
-          ctx.arc(0, 0, cellW * 0.9, 0, Math.PI * 2);
-          ctx.fillStyle = isBlue ? 'rgba(56, 189, 248, 0.35)' : 'rgba(245, 158, 11, 0.35)';
+          ctx.arc(0, 0, cellW * 0.8, 0, Math.PI * 2);
           ctx.fill();
 
-          // Serrated circular saw blade
-          const teeth = 12;
-          const outerR = cellW * 0.85;
-          const innerR = cellW * 0.65;
-          ctx.beginPath();
-          for (let i = 0; i < teeth; i++) {
-            const a1 = (i / teeth) * Math.PI * 2;
-            const a2 = ((i + 0.5) / teeth) * Math.PI * 2;
-            ctx.lineTo(Math.cos(a1) * outerR, Math.sin(a1) * outerR);
-            ctx.lineTo(Math.cos(a2) * innerR, Math.sin(a2) * innerR);
-          }
-          ctx.closePath();
-          ctx.fillStyle = '#f1f5f9';
-          ctx.fill();
-          ctx.strokeStyle = '#94a3b8';
-          ctx.lineWidth = 1.5;
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 2;
           ctx.stroke();
 
-          // Inner metallic hub
-          ctx.beginPath();
-          ctx.arc(0, 0, cellW * 0.3, 0, Math.PI * 2);
-          ctx.fillStyle = isBlue ? '#0284c7' : '#d97706';
-          ctx.fill();
+          // 4 Rotating saw teeth
+          ctx.fillStyle = PALETTE.woodDark;
+          for (let st = 0; st < 4; st++) {
+            ctx.rotate(Math.PI / 2);
+            ctx.fillRect(cellW * 0.65, -2, 6, 4);
+          }
         } else if (p.type === 'cannonball') {
-          // Glossy paint cannonball
-          ctx.shadowColor = color;
-          ctx.shadowBlur = 10;
+          // Heavy Catapult Paint Boulder
+          ctx.fillStyle = pColor;
           ctx.beginPath();
-          ctx.arc(pX, pY, cellW * 0.45, 0, Math.PI * 2);
-          ctx.fillStyle = color;
-          ctx.fill();
-
-          // Gloss specular reflection
-          ctx.beginPath();
-          ctx.arc(pX - cellW * 0.12, pY - cellW * 0.12, cellW * 0.15, 0, Math.PI * 2);
-          ctx.fillStyle = '#ffffff';
-          ctx.fill();
-        } else if (p.type === 'mortar') {
-          // Parabolic arc mortar with simulated altitude
-          const arc = p.arcProgress ?? 0;
-          const altitude = Math.sin(arc * Math.PI) * cellH * 3.5;
-
-          // Shadow on the ground (Soft royal shadow)
-          ctx.fillStyle = 'rgba(10, 30, 80, 0.35)';
-          ctx.beginPath();
-          ctx.ellipse(pX, pY, cellW * 0.35, cellH * 0.2, 0, 0, Math.PI * 2);
-          ctx.fill();
-
-          // Airborne shell
-          const shellY = pY - altitude;
-          ctx.beginPath();
-          ctx.arc(pX, shellY, cellW * 0.55 * (1 + (altitude / (cellH * 3.5)) * 0.3), 0, Math.PI * 2);
-          ctx.fillStyle = color;
+          ctx.arc(0, 0, cellW * 0.38, 0, Math.PI * 2);
           ctx.fill();
           ctx.strokeStyle = '#ffffff';
           ctx.lineWidth = 1.5;
           ctx.stroke();
-        } else {
-          // Fast dart pellet / blaster shot
-          ctx.translate(pX, pY);
-          const angle = Math.atan2(p.vy, p.vx);
-          ctx.rotate(angle);
-
-          // Arrow projectile
-          ctx.fillStyle = color;
+        } else if (p.type === 'mortar') {
+          // High Arc Alchemy Flask
+          ctx.fillStyle = glowColor;
           ctx.beginPath();
-          ctx.moveTo(cellW * 0.35, 0);
-          ctx.lineTo(-cellW * 0.25, -cellH * 0.15);
-          ctx.lineTo(-cellW * 0.1, 0);
-          ctx.lineTo(-cellW * 0.25, cellH * 0.15);
+          ctx.arc(0, 0, cellW * 0.32, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = PALETTE.goldAccent;
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        } else if (p.type === 'laser_beam') {
+          // Leyline Arcane Beam
+          ctx.fillStyle = '#00f0ff';
+          ctx.fillRect(-cellW * 0.12, -cellH * 0.8, cellW * 0.24, cellH * 1.6);
+        } else {
+          // Royal Ranger Enchanted Crossbow Bolt
+          ctx.rotate(Math.atan2(p.vy, p.vx));
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(-5, -1.5, 10, 3);
+          ctx.fillStyle = pColor;
+          ctx.beginPath();
+          ctx.moveTo(5, -3);
+          ctx.lineTo(9, 0);
+          ctx.lineTo(5, 3);
           ctx.closePath();
           ctx.fill();
         }
@@ -602,168 +759,107 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         ctx.restore();
       });
 
-      // 6. Render Particles (Paint splats, sparks, smoke)
+      // ========================================================
+      // 8. COMBAT PARTICLES & PAINT BURSTS
+      // ========================================================
       particles.forEach((pt) => {
-        const ptX = paddingX + (pt.x + 0.5) * cellW;
-        const ptY = paddingY + (pt.y + 0.5) * cellH;
+        const ptx = paddingX + pt.x * cellW;
+        const pty = paddingY + pt.y * cellH;
 
         ctx.save();
-        ctx.globalAlpha = Math.max(0, pt.alpha);
-
-        if (pt.shape === 'ring') {
-          ctx.strokeStyle = pt.color;
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.arc(ptX, ptY, pt.size * cellW, 0, Math.PI * 2);
-          ctx.stroke();
-        } else if (pt.shape === 'square') {
-          ctx.fillStyle = pt.color;
-          ctx.fillRect(ptX - pt.size / 2, ptY - pt.size / 2, pt.size, pt.size);
+        ctx.globalAlpha = pt.alpha;
+        ctx.fillStyle = pt.color;
+        ctx.beginPath();
+        if (pt.shape === 'square') {
+          ctx.fillRect(ptx - pt.size / 2, pty - pt.size / 2, pt.size, pt.size);
         } else {
-          ctx.fillStyle = pt.color;
-          ctx.beginPath();
-          ctx.arc(ptX, ptY, pt.size, 0, Math.PI * 2);
+          ctx.arc(ptx, pty, pt.size, 0, Math.PI * 2);
           ctx.fill();
         }
-
         ctx.restore();
       });
 
-      // 7. Render Floating Text (+120, SPLAT, etc.)
+      // ========================================================
+      // 9. FLOATING DAMAGE & COMBAT NUMBERS
+      // ========================================================
       floatingTexts.forEach((ft) => {
-        const ftX = paddingX + (ft.x + 0.5) * cellW;
-        const ftY = paddingY + (ft.y + 0.5) * cellH;
+        const ftx = paddingX + ft.x * cellW;
+        const fty = paddingY + ft.y * cellH;
 
         ctx.save();
-        ctx.globalAlpha = Math.max(0, ft.alpha);
-        ctx.font = `800 ${Math.max(12, Math.floor(cellH * 0.5))}px Fredoka, sans-serif`;
+        ctx.globalAlpha = ft.alpha;
+        ctx.font = 'bold 12px sans-serif';
         ctx.fillStyle = ft.color;
-        ctx.strokeStyle = '#0a2360';
+        ctx.strokeStyle = '#000000';
         ctx.lineWidth = 2.5;
-        ctx.textAlign = 'center';
-        ctx.strokeText(ft.text, ftX, ftY);
-        ctx.fillText(ft.text, ftX, ftY);
+        ctx.strokeText(ft.text, ftx, fty);
+        ctx.fillText(ft.text, ftx, fty);
         ctx.restore();
       });
 
-      // 8. Render Animated Emotes on Battlefield
+      // ========================================================
+      // 10. TAUNT EMOTES (Speech Bubbles)
+      // ========================================================
       emotes.forEach((em) => {
         const emX = paddingX + (em.x + 0.5) * cellW;
         const emY = paddingY + (em.y + 0.5) * cellH;
-        const age = (Date.now() - em.createdAt) / 1000;
-        if (age > 2.5) return;
-
-        const scale = age < 0.2 ? age / 0.2 : 1;
-        const floatY = emY - age * 18;
 
         ctx.save();
-        ctx.translate(emX, floatY);
-        ctx.scale(scale, scale);
-
-        // Speech bubble bg
         ctx.fillStyle = '#ffffff';
-        ctx.shadowColor = 'rgba(12, 36, 95, 0.35)';
-        ctx.shadowBlur = 8;
         ctx.beginPath();
-        ctx.roundRect(-22, -22, 44, 44, 12);
+        ctx.arc(emX, emY, 18, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = em.team === 'blue' ? '#0284c7' : '#e11d48';
+        ctx.strokeStyle = PALETTE.goldAccent;
         ctx.lineWidth = 2;
         ctx.stroke();
 
-        ctx.font = '24px sans-serif';
+        ctx.font = '20px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(em.emoji, 0, 0);
-
+        ctx.fillText(em.emoji, emX, emY);
         ctx.restore();
       });
 
       animId = requestAnimationFrame(render);
     };
 
-    render();
+    animId = requestAnimationFrame(render);
+    return () => cancelAnimationFrame(animId);
+  }, [grid, units, projectiles, particles, floatingTexts, emotes, draggedCard, dragPos, getArenaMetrics, pixelToGrid]);
 
-    return () => {
-      cancelAnimationFrame(animId);
-    };
-  }, [grid, units, projectiles, particles, floatingTexts, emotes, draggedCard, dragPos, pixelToGrid]);
-
-  // Pointer Up Handler to deploy card
+  // Pointer interaction for card deployment
   const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!draggedCard || isGameOver) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const clientX = e.clientX - rect.left;
-    const clientY = e.clientY - rect.top;
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const canvasX = (e.clientX - rect.left) * scaleX;
+    const canvasY = (e.clientY - rect.top) * scaleY;
 
-    const { gx, gy } = pixelToGrid(clientX, clientY, canvas.width, canvas.height);
+    const { gx, gy } = pixelToGrid(canvasX, canvasY, canvas.width, canvas.height);
 
-    // Rule: saw can be launched anywhere on player half; turrets must be on blue tiles
+    // Validate placement rules
     const isSaw = draggedCard.id === 'saw';
-    const isBlueTile = grid[gy]?.[gx] === 'blue';
-    const isValid = isSaw ? gy >= ROWS / 2 : isBlueTile;
+    const isBlueTerritory = grid[gy]?.[gx] === 'blue';
+    const canDeploy = isSaw ? gy >= ROWS / 2 : isBlueTerritory;
 
-    if (isValid) {
+    if (canDeploy) {
       onDeployCard(draggedCard, gx, gy);
     }
   };
 
   return (
-    <div className="relative w-full h-full flex items-center justify-center p-1">
-      <div className="relative max-h-[72vh] aspect-[2/3] flex items-center justify-center">
-        <canvas
-          ref={canvasRef}
-          width={420}
-          height={630}
-          onPointerUp={handlePointerUp}
-          className="w-full h-full touch-none rounded-xl bg-[#0d2d74] border-2 border-blue-400/40 shadow-[0_4px_25px_rgba(14,165,233,0.35)]"
-        />
-
-        {/* Floating Unit Active Passive Indicator Badges using .animate-ability-pulse */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          {units.map((unit) => {
-            if (!unit.passive) return null;
-            const isShield = unit.shieldHp > 0;
-            const isSpeed = unit.passive.type === 'speed_boost' || unit.passive.type === 'territory_surge';
-            const isOvercharge = unit.passive.type === 'rapid_overcharge';
-            if (!isShield && !isSpeed && !isOvercharge) return null;
-
-            // Relative grid percentage placement
-            const paddingXPercent = 4;
-            const paddingYPercent = 2;
-            const arenaWPercent = 92;
-            const arenaHPercent = 96;
-            const leftPercent = paddingXPercent + ((unit.x + 0.5) / COLS) * arenaWPercent;
-            const topPercent = paddingYPercent + ((unit.y + 0.5) / ROWS) * arenaHPercent;
-
-            const icon = isShield ? '🛡️' : isSpeed ? '🪽' : '🔋';
-            const label = isShield ? `${Math.round(unit.shieldHp)}` : 'SPEED';
-            const badgeBorder = isShield ? 'border-sky-400 text-sky-300' : isSpeed ? 'border-amber-400 text-amber-300' : 'border-purple-400 text-purple-300';
-            const badgeBg = isShield ? 'bg-sky-950/90' : isSpeed ? 'bg-amber-950/90' : 'bg-purple-950/90';
-
-            return (
-              <div
-                key={`badge-${unit.id}`}
-                className="absolute transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center"
-                style={{
-                  left: `${leftPercent}%`,
-                  top: `${topPercent - 4}%`,
-                }}
-              >
-                <div
-                  className={`animate-ability-pulse ${badgeBg} ${badgeBorder} border rounded-full px-2 py-0.5 flex items-center gap-1 shadow-lg text-[10px] font-black tracking-tight select-none`}
-                >
-                  <span className="text-xs inline-block animate-ability-pulse">{icon}</span>
-                  <span>{label}</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+    <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
+      <canvas
+        ref={canvasRef}
+        width={480}
+        height={780}
+        onPointerUp={handlePointerUp}
+        className="aspect-[16/26] max-w-[430px] max-h-full min-h-0 w-auto h-auto block select-none touch-none shadow-2xl rounded-2xl"
+      />
     </div>
   );
 };

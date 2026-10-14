@@ -9,8 +9,13 @@ export const TechStackGuideModal: React.FC<TechStackGuideModalProps> = ({ onClos
   const [activeTab, setActiveTab] = useState<'recommendation' | 'comparison' | 'architecture'>('recommendation');
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#071940]/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-5">
-      <div className="relative w-full max-w-2xl bg-gradient-to-b from-[#143c8c] via-[#0f2e6e] to-[#0a235c] border-2 border-indigo-400 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div
+      className="fixed inset-0 z-50 bg-[#071940]/85 backdrop-blur-md flex items-center justify-center p-3 safe-pt safe-pb select-none"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="relative w-full max-w-2xl bg-gradient-to-b from-[#143c8c] via-[#0f2e6e] to-[#0a235c] border-2 border-indigo-400 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[calc(100dvh-var(--safe-top)-var(--safe-bottom)-20px)]">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-blue-400/40 bg-[#0a235c]">
           <div className="flex items-center gap-2.5">

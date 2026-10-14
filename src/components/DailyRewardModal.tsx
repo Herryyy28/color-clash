@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, Gift, Sparkles, Check, Clock, Play } from 'lucide-react';
+import { Calendar, Gift, Sparkles, Check, Clock, Play } from 'lucide-react';
 import { currencyService } from '../services/currencyService';
 import { sounds } from '../audio';
 import confetti from 'canvas-confetti';
+import { ResponsiveModal } from './ResponsiveModal';
 
 interface DailyRewardModalProps {
   isOpen: boolean;
@@ -50,34 +51,15 @@ export const DailyRewardModal: React.FC<DailyRewardModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#071940]/85 backdrop-blur-md flex items-center justify-center p-3 select-none">
-      <div className="relative w-full max-w-sm rounded-3xl bg-gradient-to-b from-[#1b50ba] via-[#143e99] to-[#0c2a6b] p-0.5 border-2 border-sky-300 shadow-[0_0_50px_rgba(27,80,186,0.6)] overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="w-full bg-[#123687] px-4 py-3 flex items-center justify-between border-b border-sky-300/40">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">🎁</span>
-            <div className="flex flex-col">
-              <h3 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-1.5 drop-shadow">
-                7-Day Daily Rewards <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
-              </h3>
-              <span className="text-[10px] text-sky-200 font-bold">
-                Log in daily to claim escalating gold vaults
-              </span>
-            </div>
-          </div>
-          <button
-            onClick={() => {
-              sounds.playClick();
-              onClose();
-            }}
-            className="w-7 h-7 rounded-full bg-[#1b4cb8] text-white flex items-center justify-center border border-white/60 cursor-pointer active:scale-95"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Modal Body */}
-        <div className="p-3.5 bg-gradient-to-b from-[#143d99] via-[#0f317d] to-[#092257] flex flex-col gap-3">
+    <ResponsiveModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="7-Day Daily Rewards"
+      subtitle="Log in daily to claim escalating gold vaults"
+      icon={<span className="text-xl">🎁</span>}
+      maxWidthClass="max-w-sm"
+    >
+      <div className="flex flex-col gap-3">
           {feedback && (
             <div className="p-2 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-400 text-amber-950 text-xs font-black text-center shadow animate-in fade-in border border-white">
               {feedback}
@@ -177,7 +159,6 @@ export const DailyRewardModal: React.FC<DailyRewardModalProps> = ({
             </button>
           </div>
         </div>
-      </div>
-    </div>
+      </ResponsiveModal>
   );
 };

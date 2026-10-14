@@ -1,0 +1,19 @@
+# Color Clash — Android Release Signing Properties Template
+#
+# INSTRUCTIONS:
+# 1. Copy this file to: android/release-signing.properties (DO NOT COMMIT THAT FILE)
+# 2. Generate a release keystore using keytool or Android Studio:
+#    keytool -genkey -v -keystore my-release-key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias colorclash
+# 3. Fill in the values below:
+
+# Absolute path or path relative to android/app directory:
+RELEASE_KEYSTORE_PATH=my-release-key.jks
+
+# Keystore password:
+RELEASE_KEYSTORE_PASSWORD=your_keystore_password_here
+
+# Key alias name:
+RELEASE_KEY_ALIAS=colorclash
+
+# Key password:
+RELEASE_KEY_PASSWORD=your_key_password_here

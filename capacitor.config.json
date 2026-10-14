@@ -3,7 +3,7 @@
   "appName": "Color Clash",
   "webDir": "dist",
   "android": {
-    "backgroundColor": "#070b14",
+    "backgroundColor": "#17345D",
     "allowMixedContent": true
   },
   "server": {

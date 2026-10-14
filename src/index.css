@@ -1,19 +1,265 @@
 @import "tailwindcss";
 
 :root {
-  --sat: env(safe-area-inset-top, 0px);
-  --sab: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --touch-target-min: 44px;
+  --font-display: 'Lilita One', cursive, sans-serif;
+  --font-body: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* Royal Fantasy Arena Official Color Tokens */
+  --royal-blue: #1769D2;
+  --victory-gold: #FFC83D;
+  --deep-navy: #17345D;
+  --warm-parchment: #F7E7BE;
+  --battle-red: #F04452;
+  --arena-green: #79B957;
 }
 
 @layer base {
-  body {
-    font-family: 'Fredoka', 'Nunito', system-ui, -apple-system, sans-serif;
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    position: fixed;
+    font-family: var(--font-body);
+    font-weight: 700;
     overscroll-behavior: none;
     -webkit-tap-highlight-color: transparent;
     -webkit-touch-callout: none;
     user-select: none;
     -webkit-user-select: none;
+    background-color: var(--deep-navy);
+    color: #ffffff;
   }
+
+  /* Prevent text resize on orientation change */
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* Accessible focus indicators for interactive buttons */
+  button:focus-visible, a:focus-visible {
+    outline: 2px solid var(--victory-gold);
+    outline-offset: 2px;
+  }
+}
+
+/* ========================================================= */
+/* TYPOGRAPHY SYSTEM: LILITA ONE (Display) & NUNITO (Body)   */
+/* ========================================================= */
+.font-display {
+  font-family: var(--font-display) !important;
+  letter-spacing: 0.03em;
+}
+
+.font-body {
+  font-family: var(--font-body) !important;
+}
+
+/* Stylized 3D Game Headlines & Labels */
+.game-headline {
+  font-family: var(--font-display);
+  letter-spacing: 0.04em;
+  text-shadow: 0 2px 4px rgba(23, 52, 93, 0.9), 0 1px 0 rgba(0, 0, 0, 0.4);
+}
+
+.game-title-lg {
+  font-family: var(--font-display);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-shadow: 0 4px 0 #17345D, 0 8px 16px rgba(0, 0, 0, 0.7);
+}
+
+/* High-readability numeric counters with tabular numerals */
+.game-counter {
+  font-family: var(--font-body);
+  font-weight: 800;
+  font-feature-settings: "tnum" on, "lnum" on;
+}
+
+/* ========================================================= */
+/* ROYAL FANTASY ARENA PANELS & CONTAINERS                   */
+/* ========================================================= */
+/* Royal Blue Panel with Gold Trim and Deep Navy shadow */
+.royal-panel {
+  background: linear-gradient(180deg, #1c75e8 0%, #1769D2 45%, #17345D 100%);
+  border: 2px solid #FFC83D;
+  border-bottom: 4px solid #b3830c;
+  box-shadow: 0 8px 24px rgba(10, 25, 50, 0.65), inset 0 1px 2px rgba(255, 255, 255, 0.45);
+}
+
+/* Warm Parchment Information Panel for stats, cards, and tooltips */
+.parchment-panel {
+  background: linear-gradient(180deg, #fdf4dc 0%, #F7E7BE 65%, #edd49f 100%);
+  color: #3b2207;
+  border: 2px solid #d4a962;
+  border-bottom: 3px solid #946927;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.8), 0 4px 12px rgba(23, 52, 93, 0.35);
+}
+
+/* Deep Navy Stone Container */
+.navy-panel {
+  background: linear-gradient(180deg, #1f4273 0%, #17345D 55%, #0f2444 100%);
+  border: 2px solid #3b68a8;
+  border-bottom: 4px solid #0a182d;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.25);
+}
+
+/* Gold Heraldic Border Trim */
+.gold-trim {
+  border: 2px solid #FFC83D;
+  box-shadow: 0 0 10px rgba(255, 200, 61, 0.4), inset 0 0 6px rgba(255, 200, 61, 0.25);
+}
+
+/* ========================================================= */
+/* CHUNKY 3D MOBILE GAME BUTTONS WITH TACTILE PRESSED STATES */
+/* ========================================================= */
+/* Primary Victory Gold Button (BATTLE, Claim, Spin) */
+.btn-game-yellow,
+.btn-royal-gold {
+  background: linear-gradient(180deg, #ffea85 0%, #FFC83D 45%, #e6a715 85%, #c78906 100%);
+  border: 2px solid #ffffff;
+  border-bottom: 5px solid #7a5000;
+  color: #4a2800;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+  box-shadow: 0 4px 14px rgba(122, 80, 0, 0.55), inset 0 1px 2px rgba(255, 255, 255, 0.9);
+  font-family: var(--font-display);
+  letter-spacing: 0.04em;
+  transition: all 0.08s ease-out;
+}
+.btn-game-yellow:active,
+.btn-royal-gold:active {
+  transform: translateY(3px);
+  border-bottom-width: 2px;
+  box-shadow: 0 1px 4px rgba(122, 80, 0, 0.6), inset 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Secondary Royal Blue Button */
+.btn-game-blue,
+.btn-royal-blue {
+  background: linear-gradient(180deg, #4594f5 0%, #1769D2 45%, #1255aa 85%, #0d4187 100%);
+  border: 2px solid #ffffff;
+  border-bottom: 5px solid #0b2d5c;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(11, 45, 92, 0.8);
+  box-shadow: 0 4px 14px rgba(23, 52, 93, 0.55), inset 0 1px 2px rgba(255, 255, 255, 0.7);
+  font-family: var(--font-display);
+  letter-spacing: 0.03em;
+  transition: all 0.08s ease-out;
+}
+.btn-game-blue:active,
+.btn-royal-blue:active {
+  transform: translateY(3px);
+  border-bottom-width: 2px;
+  box-shadow: 0 1px 4px rgba(11, 45, 92, 0.6), inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Arena Green Button (Upgrade, Free, Level Up) */
+.btn-game-green,
+.btn-arena-green {
+  background: linear-gradient(180deg, #9ae275 0%, #79B957 45%, #609c3e 85%, #4b802e 100%);
+  border: 2px solid #ffffff;
+  border-bottom: 5px solid #285014;
+  color: #123105;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 14px rgba(40, 80, 20, 0.55), inset 0 1px 2px rgba(255, 255, 255, 0.8);
+  font-family: var(--font-display);
+  letter-spacing: 0.03em;
+  transition: all 0.08s ease-out;
+}
+.btn-game-green:active,
+.btn-arena-green:active {
+  transform: translateY(3px);
+  border-bottom-width: 2px;
+  box-shadow: 0 1px 4px rgba(40, 80, 20, 0.6), inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Battle Red Button (Surrender, Forfeit, Attack Hazard) */
+.btn-game-red,
+.btn-battle-red {
+  background: linear-gradient(180deg, #f87480 0%, #F04452 45%, #cf2d3b 85%, #a81c28 100%);
+  border: 2px solid #ffffff;
+  border-bottom: 5px solid #5e0c13;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(94, 12, 19, 0.8);
+  box-shadow: 0 4px 14px rgba(94, 12, 19, 0.55), inset 0 1px 2px rgba(255, 255, 255, 0.7);
+  font-family: var(--font-display);
+  letter-spacing: 0.03em;
+  transition: all 0.08s ease-out;
+}
+.btn-game-red:active,
+.btn-battle-red:active {
+  transform: translateY(3px);
+  border-bottom-width: 2px;
+  box-shadow: 0 1px 4px rgba(94, 12, 19, 0.6), inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Fantasy Beveled Game Panel */
+.game-panel {
+  background: linear-gradient(180deg, #1c75e8 0%, #1769D2 45%, #17345D 100%);
+  border: 2px solid #FFC83D;
+  border-bottom: 4px solid #102646;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.3);
+}
+
+/* Safe Area Inset Helpers */
+.safe-pt {
+  padding-top: max(8px, env(safe-area-inset-top, 0px));
+}
+
+.safe-pb {
+  padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
+}
+
+.safe-pl {
+  padding-left: max(8px, env(safe-area-inset-left, 0px));
+}
+
+.safe-pr {
+  padding-right: max(8px, env(safe-area-inset-right, 0px));
+}
+
+/* Minimum touch target utility for mobile tap accessibility */
+.touch-min {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* Custom smooth scrollbar for modals and collection */
+.scroll-touch {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(56, 189, 248, 0.4) transparent;
+}
+
+.scroll-touch::-webkit-scrollbar {
+  width: 5px;
+}
+
+.scroll-touch::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scroll-touch::-webkit-scrollbar-thumb {
+  background-color: rgba(56, 189, 248, 0.4);
+  border-radius: 9999px;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 @keyframes pulse-glow {

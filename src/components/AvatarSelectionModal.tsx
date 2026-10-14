@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { X, Check, Lock, Edit3, Sparkles, Gem, Coins, Crown } from 'lucide-react';
+import { X, Check, Lock, Edit3, Sparkles, Gem, Coins, Crown, RotateCcw } from 'lucide-react';
 import { sounds } from '../audio';
+import { ResponsiveModal } from './ResponsiveModal';
 
 export interface AvatarItem {
   id: string;
@@ -325,171 +326,168 @@ export const AvatarSelectionModal: React.FC<AvatarSelectionModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#071940]/85 backdrop-blur-md flex items-center justify-center p-3 select-none animate-in fade-in duration-200">
-      <div className="relative w-full max-w-sm rounded-3xl bg-gradient-to-b from-purple-500 via-indigo-700 to-[#0e2764] p-0.5 shadow-2xl border-2 border-purple-300 overflow-hidden animate-in zoom-in-95 duration-150">
-        {/* Purple Header Banner matching video (15-18s) */}
-        <div className="w-full bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 px-4 py-3 flex items-center justify-between border-b border-purple-300/40">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">🎭</span>
-            <div className="flex flex-col">
-              <h2 className="text-base font-black text-white tracking-wide leading-none drop-shadow">
-                CHOOSE AVATAR
-              </h2>
-              <span className="text-[10px] text-purple-100 font-bold">
-                {isLiveInBattle ? 'Live Battle Paused in Background' : 'Customize your profile appearance'}
-              </span>
+    <ResponsiveModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="ROYAL ARMOURY"
+      subtitle={isLiveInBattle ? 'Live Battle Paused in Background' : 'Select your Champion Knight avatar'}
+      icon={<span className="text-xl">👑</span>}
+      maxWidthClass="max-w-sm"
+      headerGradient="bg-gradient-to-r from-[#1769D2] via-[#124d9c] to-[#17345D]"
+      borderGlowColor="border-[#FFC83D] shadow-[0_0_50px_rgba(255,200,61,0.5)]"
+    >
+      <div className="flex flex-col gap-3">
+        {/* Name Editor Bar */}
+        <div className="w-full bg-[#17345D] border-2 border-[#FFC83D]/60 rounded-2xl p-2.5 flex items-center justify-between gap-2 shadow-lg">
+          {editingName ? (
+            <div className="flex-1 flex items-center gap-1.5">
+              <input
+                type="text"
+                maxLength={16}
+                value={nameInput}
+                onChange={(e) => setNameInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSaveName();
+                  if (e.key === 'Escape') setEditingName(false);
+                }}
+                className="flex-1 bg-[#1769D2]/30 text-white text-xs font-bold px-2 py-1.5 rounded-lg border-2 border-[#FFC83D] focus:outline-none focus:ring-1 focus:ring-[#FFC83D] min-w-0"
+                autoFocus
+                placeholder="Enter Champion name..."
+              />
+              <button
+                type="button"
+                onClick={handleSaveName}
+                className="px-3 py-1.5 btn-royal-gold text-[#17345D] font-black text-xs rounded-lg shadow cursor-pointer active:scale-95 shrink-0"
+              >
+                Save
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditingName(false)}
+                className="px-2.5 py-1.5 bg-[#17345D] hover:bg-slate-700 text-[#F7E7BE] text-xs font-bold rounded-lg border border-white/20 cursor-pointer active:scale-95 shrink-0"
+              >
+                ✕
+              </button>
             </div>
-          </div>
-          <button
-            onClick={() => {
-              sounds.playClick();
-              onClose();
-            }}
-            className="w-7 h-7 rounded-full bg-[#1b4cb8] hover:bg-[#2563eb] text-white flex items-center justify-center border-2 border-white/60 cursor-pointer active:scale-95 shadow"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Modal Body */}
-        <div className="p-4 bg-gradient-to-b from-[#18387e] via-[#102758] to-[#0c1f47] flex flex-col gap-3">
-          {/* Name Editor Bar */}
-          <div className="w-full bg-[#0a235c] border-2 border-purple-400/50 rounded-2xl p-2.5 flex items-center justify-between gap-2 shadow">
-            {editingName ? (
-              <div className="flex-1 flex items-center gap-1.5">
-                <input
-                  type="text"
-                  maxLength={16}
-                  value={nameInput}
-                  onChange={(e) => setNameInput(e.target.value)}
-                  className="flex-1 bg-[#133785] text-white text-xs font-bold px-2 py-1.5 rounded-lg border-2 border-purple-300 focus:outline-none focus:ring-1 focus:ring-yellow-300"
-                  autoFocus
-                />
-                <button
-                  onClick={handleSaveName}
-                  className="px-3 py-1.5 bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-black text-xs rounded-lg border border-purple-200 shadow cursor-pointer active:scale-95"
-                >
-                  Save
-                </button>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-[#1769D2] border-2 border-[#FFC83D] flex items-center justify-center shadow shrink-0">
+                  {renderAvatarSvg(
+                    avatars.find((a) => a.id === currentAvatarId)?.svgType || 'kid_headphones',
+                    'w-6 h-6'
+                  )}
+                </div>
+                <div className="flex flex-col leading-tight min-w-0">
+                  <span className="text-[10px] text-[#FFC83D] font-bold uppercase tracking-wide">Champion Name</span>
+                  <span className="text-xs font-black text-white truncate drop-shadow">{playerName}</span>
+                </div>
               </div>
-            ) : (
-              <>
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-purple-900/80 border border-purple-300/50 flex items-center justify-center shadow">
-                    {renderAvatarSvg(
-                      avatars.find((a) => a.id === currentAvatarId)?.svgType || 'kid_headphones',
-                      'w-6 h-6'
-                    )}
-                  </div>
-                  <div className="flex flex-col leading-tight">
-                    <span className="text-[10px] text-purple-200 font-bold uppercase">Player Name</span>
-                    <span className="text-xs font-black text-white">{playerName}</span>
-                  </div>
-                </div>
-                <button
-                  onClick={() => {
-                    sounds.playClick();
-                    setNameInput(playerName);
-                    setEditingName(true);
-                  }}
-                  className="flex items-center gap-1 text-[11px] font-bold text-yellow-300 hover:text-white bg-purple-900/60 border border-purple-400/60 px-2 py-1 rounded-lg cursor-pointer active:scale-95 shadow"
-                >
-                  <Edit3 className="w-3 h-3" /> Edit
-                </button>
-              </>
-            )}
-          </div>
-
-          {/* Feedback banner */}
-          {feedbackMsg && (
-            <div className="text-[11px] font-bold text-center py-1 px-2 rounded-lg bg-purple-900/80 border border-purple-300 text-purple-100 animate-in fade-in shadow">
-              {feedbackMsg}
-            </div>
+              <button
+                type="button"
+                onClick={() => {
+                  sounds.playClick();
+                  setNameInput(playerName);
+                  setEditingName(true);
+                }}
+                className="flex items-center gap-1 text-[11px] font-bold text-[#17345D] btn-royal-gold px-2.5 py-1.5 rounded-lg cursor-pointer shadow shrink-0"
+              >
+                <Edit3 className="w-3.5 h-3.5" /> Edit
+              </button>
+            </>
           )}
-
-          {/* Avatar Grid (3 columns) */}
-          <div className="grid grid-cols-3 gap-2.5 max-h-64 overflow-y-auto pr-1">
-            {avatars.map((item) => {
-              const isSelected = currentAvatarId === item.id;
-              const isItemUnlocked = item.unlocked || (item.id === 'vip_king' && isVip);
-
-              return (
-                <div
-                  key={item.id}
-                  onClick={() => handleSelectOrUnlock(item)}
-                  className={`relative rounded-2xl p-2 flex flex-col items-center justify-between border-2 transition-all cursor-pointer active:scale-95 ${
-                    isSelected
-                      ? 'bg-gradient-to-b from-purple-700 to-indigo-800 border-yellow-300 shadow-[0_0_15px_rgba(250,204,21,0.6)] scale-105'
-                      : isItemUnlocked
-                      ? 'bg-[#143c8c] border-blue-400/50 hover:border-yellow-300 shadow'
-                      : 'bg-[#0b245e] border-blue-400/30 opacity-70'
-                  }`}
-                >
-                  {/* Selected Tick Indicator */}
-                  {isSelected && (
-                    <div className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center border-2 border-white shadow">
-                      <Check className="w-3 h-3 stroke-[3]" />
-                    </div>
-                  )}
-
-                  {/* VIP Badge */}
-                  {item.category === 'vip' && (
-                    <div className="absolute top-1 left-1 bg-amber-400 text-amber-950 text-[8px] font-black px-1 rounded-sm flex items-center gap-0.5 border border-white shadow">
-                      <Crown className="w-2.5 h-2.5 fill-current" /> VIP
-                    </div>
-                  )}
-
-                  {/* Avatar SVG Portrait */}
-                  <div className="w-12 h-12 rounded-xl bg-[#0a1e4a] border border-white/30 p-1 flex items-center justify-center my-1 shadow-inner">
-                    {renderAvatarSvg(item.svgType, 'w-10 h-10')}
-                  </div>
-
-                  {/* Name */}
-                  <span className="text-[10px] font-black text-white truncate max-w-full text-center">
-                    {item.name}
-                  </span>
-
-                  {/* Status / Cost Pill */}
-                  <div className="mt-1">
-                    {isSelected ? (
-                      <span className="text-[8px] font-black bg-purple-500 text-white px-1.5 py-0.5 rounded-full shadow">
-                        EQUIPPED
-                      </span>
-                    ) : isItemUnlocked ? (
-                      <span className="text-[8px] font-black text-emerald-200 bg-emerald-700/80 border border-emerald-400 px-1.5 py-0.5 rounded-full shadow">
-                        SELECT
-                      </span>
-                    ) : item.costCoins ? (
-                      <span className="text-[8px] font-black text-yellow-300 bg-[#081b42] border border-yellow-400/50 px-1.5 py-0.5 rounded-full flex items-center gap-0.5 shadow">
-                        <Coins className="w-2.5 h-2.5 text-yellow-400" /> {item.costCoins}
-                      </span>
-                    ) : item.costGems ? (
-                      <span className="text-[8px] font-black text-sky-200 bg-[#081b42] border border-sky-400/50 px-1.5 py-0.5 rounded-full flex items-center gap-0.5 shadow">
-                        <Gem className="w-2.5 h-2.5 text-sky-400" /> {item.costGems}
-                      </span>
-                    ) : (
-                      <span className="text-[8px] font-black text-blue-200 flex items-center gap-0.5 bg-[#081b42] px-1.5 py-0.5 rounded-full border border-blue-400/30">
-                        <Lock className="w-2.5 h-2.5" /> {item.requirementText || 'Locked'}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Bottom Close Button */}
-          <button
-            onClick={() => {
-              sounds.playClick();
-              onClose();
-            }}
-            className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-xs uppercase tracking-wider shadow border border-purple-300 cursor-pointer active:scale-95 transition"
-          >
-            Done
-          </button>
         </div>
+
+        {/* Feedback banner */}
+        {feedbackMsg && (
+          <div className="text-[11px] font-bold text-center py-1.5 px-2 rounded-lg bg-[#FFC83D] border-2 border-white text-[#17345D] animate-in fade-in shadow-md">
+            {feedbackMsg}
+          </div>
+        )}
+
+        {/* Avatar Grid (3 columns) */}
+        <div className="grid grid-cols-3 gap-2 sm:gap-2.5 max-h-[46vh] overflow-y-auto scroll-touch pr-1">
+          {avatars.map((item) => {
+            const isSelected = currentAvatarId === item.id;
+            const isItemUnlocked = item.unlocked || (item.id === 'vip_king' && isVip);
+
+            return (
+              <div
+                key={item.id}
+                onClick={() => handleSelectOrUnlock(item)}
+                className={`relative rounded-2xl p-2 flex flex-col items-center justify-between border-2 transition-all cursor-pointer active:scale-95 ${
+                  isSelected
+                    ? 'bg-gradient-to-b from-[#1769D2] to-[#17345D] border-2 border-b-4 border-[#FFC83D] border-b-[#b38615] shadow-[0_0_20px_rgba(255,200,61,0.6)] scale-102'
+                    : isItemUnlocked
+                    ? 'bg-[#17345D] border-white/20 hover:border-[#FFC83D] shadow'
+                    : 'bg-[#17345D]/60 border-white/10 opacity-70'
+                }`}
+              >
+                {/* Selected Tick Indicator */}
+                {isSelected && (
+                  <div className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#79B957] text-white flex items-center justify-center border-2 border-white shadow">
+                    <Check className="w-3 h-3 stroke-[3]" />
+                  </div>
+                )}
+
+                {/* VIP Badge */}
+                {item.category === 'vip' && (
+                  <div className="absolute top-1 left-1 bg-[#FFC83D] text-[#17345D] text-[8px] font-black px-1 rounded-sm flex items-center gap-0.5 border border-white shadow">
+                    <Crown className="w-2.5 h-2.5 fill-current" /> VIP
+                  </div>
+                )}
+
+                {/* Avatar SVG Portrait */}
+                <div className="w-12 h-12 rounded-xl bg-[#17345D] border border-[#FFC83D]/40 p-1 flex items-center justify-center my-1 shadow-inner">
+                  {renderAvatarSvg(item.svgType, 'w-10 h-10')}
+                </div>
+
+                {/* Name */}
+                <span className="text-[11px] font-display text-white truncate max-w-full text-center">
+                  {item.name}
+                </span>
+
+                {/* Status / Cost Pill */}
+                <div className="mt-1">
+                  {isSelected ? (
+                    <span className="text-[8px] font-display bg-[#FFC83D] text-[#17345D] px-2 py-0.5 rounded-full shadow font-black">
+                      EQUIPPED
+                    </span>
+                  ) : isItemUnlocked ? (
+                    <span className="text-[8px] font-display text-[#79B957] bg-[#79B957]/20 border border-[#79B957] px-2 py-0.5 rounded-full shadow font-bold">
+                      SELECT
+                    </span>
+                  ) : item.costCoins ? (
+                    <span className="text-[8px] game-counter font-black text-[#FFC83D] bg-[#17345D] border border-[#FFC83D]/60 px-2 py-0.5 rounded-full flex items-center gap-0.5 shadow">
+                      <Coins className="w-2.5 h-2.5 text-[#FFC83D]" /> {item.costCoins}
+                    </span>
+                  ) : item.costGems ? (
+                    <span className="text-[8px] game-counter font-black text-[#79B957] bg-[#17345D] border border-[#79B957]/60 px-2 py-0.5 rounded-full flex items-center gap-0.5 shadow">
+                      <Gem className="w-2.5 h-2.5 text-[#79B957]" /> {item.costGems}
+                    </span>
+                  ) : (
+                    <span className="text-[8px] font-display text-[#F7E7BE]/80 flex items-center gap-0.5 bg-[#17345D] px-2 py-0.5 rounded-full border border-white/20">
+                      <Lock className="w-2.5 h-2.5" /> {item.requirementText || 'Locked'}
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Bottom Done Button */}
+        <button
+          type="button"
+          onClick={() => {
+            sounds.playClick();
+            onClose();
+          }}
+          className="w-full py-3 rounded-2xl btn-royal-gold text-[#17345D] font-display text-xs uppercase tracking-wider shadow-lg cursor-pointer transition"
+        >
+          DONE
+        </button>
       </div>
-    </div>
+    </ResponsiveModal>
   );
 };

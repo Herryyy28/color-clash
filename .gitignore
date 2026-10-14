@@ -6,3 +6,20 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Keystore & Android Release Signing Credentials (NEVER COMMIT)
+*.keystore
+*.jks
+release-signing.properties
+android/release-signing.properties
+*.pem
+*.p12
+
+# Local Android Studio / Gradle outputs
+.gradle/
+android/.gradle/
+android/app/build/
+android/build/
+local.properties
+android/local.properties
+

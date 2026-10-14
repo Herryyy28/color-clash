@@ -382,6 +382,10 @@ class SoundEngine {
     });
   }
 
+  public playCoinGain() {
+    this.playRewardClaim();
+  }
+
   // Battle horns fanfare for VS intro
   public playBattleHorns() {
     if (this.isMuted) return;
@@ -412,6 +416,155 @@ class SoundEngine {
   public playFightStart() {
     this.playBattleHorns();
   }
+
+  // =========================================================================
+  // Background Music (BGM) Engine — Royal Fantasy Arena Procedural Ambience
+  // =========================================================================
+  private bgmAudioEl: HTMLAudioElement | null = null;
+  private bgmIntervalId: ReturnType<typeof setInterval> | null = null;
+  private isBgmMutedState: boolean = false;
+  private bgmVolume: number = 0.35;
+  private isBgmRunning: boolean = false;
+  private bgmStepIndex: number = 0;
+  private customBgmUrl: string | null = null;
+
+  public setCustomBgmUrl(url: string | null) {
+    this.customBgmUrl = url;
+    if (this.isBgmRunning) {
+      this.stopBgm();
+      this.startBgm();
+    }
+  }
+
+  public setBgmMuted(muted: boolean) {
+    this.isBgmMutedState = muted;
+    if (this.bgmAudioEl) {
+      this.bgmAudioEl.muted = muted;
+    }
+  }
+
+  public isBgmMuted(): boolean {
+    return this.isBgmMutedState;
+  }
+
+  public toggleBgmMute(): boolean {
+    this.isBgmMutedState = !this.isBgmMutedState;
+    if (this.bgmAudioEl) {
+      this.bgmAudioEl.muted = this.isBgmMutedState;
+    }
+    return this.isBgmMutedState;
+  }
+
+  public setBgmVolume(volume: number) {
+    this.bgmVolume = Math.max(0, Math.min(1, volume));
+    if (this.bgmAudioEl) {
+      this.bgmAudioEl.volume = this.bgmVolume;
+    }
+  }
+
+  public getBgmVolume(): number {
+    return this.bgmVolume;
+  }
+
+  public startBgm() {
+    if (this.isBgmRunning) return;
+    this.isBgmRunning = true;
+
+    // If an external licensed music track URL is configured, use it
+    if (this.customBgmUrl) {
+      try {
+        if (!this.bgmAudioEl) {
+          this.bgmAudioEl = new Audio(this.customBgmUrl);
+          this.bgmAudioEl.loop = true;
+        }
+        this.bgmAudioEl.volume = this.bgmVolume;
+        this.bgmAudioEl.muted = this.isBgmMutedState;
+        this.bgmAudioEl.play().catch(() => {});
+        return;
+      } catch (err) {
+        console.warn('[Audio] Failed to play custom audio file, falling back to Web Audio ambient loop:', err);
+      }
+    }
+
+    // High-quality procedural Royal Fantasy ambient melody sequence
+    this.initCtx();
+    const melodyChords = [
+      [220.00, 261.63, 329.63], // Am (A3, C4, E4)
+      [174.61, 220.00, 261.63], // F  (F3, A3, C4)
+      [261.63, 329.63, 392.00], // C  (C4, E4, G4)
+      [196.00, 246.94, 293.66], // G  (G3, B3, D4)
+    ];
+
+    const stepDurationMs = 2400;
+    const playCurrentStep = () => {
+      if (!this.isBgmRunning || this.isBgmMutedState || !this.ctx) return;
+      if (this.ctx.state === 'suspended') return;
+
+      const chord = melodyChords[this.bgmStepIndex % melodyChords.length];
+      this.bgmStepIndex++;
+
+      const now = this.ctx.currentTime;
+      chord.forEach((freq, i) => {
+        const osc = this.ctx!.createOscillator();
+        const gain = this.ctx!.createGain();
+        const filter = this.ctx!.createBiquadFilter();
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, now);
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(800, now);
+
+        const noteStart = now + i * 0.18;
+        const noteDuration = 1.9;
+
+        const effectiveVol = this.bgmVolume * 0.08;
+        gain.gain.setValueAtTime(0.001, noteStart);
+        gain.gain.linearRampToValueAtTime(effectiveVol, noteStart + 0.3);
+        gain.gain.exponentialRampToValueAtTime(0.0001, noteStart + noteDuration);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx!.destination);
+
+        osc.start(noteStart);
+        osc.stop(noteStart + noteDuration + 0.05);
+      });
+    };
+
+    playCurrentStep();
+    this.bgmIntervalId = setInterval(playCurrentStep, stepDurationMs);
+  }
+
+  public stopBgm() {
+    this.isBgmRunning = false;
+    if (this.bgmIntervalId) {
+      clearInterval(this.bgmIntervalId);
+      this.bgmIntervalId = null;
+    }
+    if (this.bgmAudioEl) {
+      this.bgmAudioEl.pause();
+      this.bgmAudioEl.currentTime = 0;
+    }
+  }
+
+  public pauseBgm() {
+    if (this.bgmIntervalId) {
+      clearInterval(this.bgmIntervalId);
+      this.bgmIntervalId = null;
+    }
+    if (this.bgmAudioEl) {
+      this.bgmAudioEl.pause();
+    }
+  }
+
+  public resumeBgm() {
+    if (this.isBgmRunning) {
+      this.isBgmRunning = false;
+      this.startBgm();
+    }
+  }
 }
 
 export const sounds = new SoundEngine();
+

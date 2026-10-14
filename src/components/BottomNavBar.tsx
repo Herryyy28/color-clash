@@ -62,7 +62,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
   return (
     <nav
       aria-label="Game navigation"
-      className="w-full bg-gradient-to-t from-[#0a245e] via-[#0d2d74] to-[#10368a] border-t-2 border-blue-400/50 px-2 py-1.5 flex items-center justify-around z-30 select-none shrink-0 shadow-[0_-4px_20px_rgba(14,165,233,0.2)]"
+      className="w-full bg-gradient-to-t from-[#0e2444] via-[#17345D] to-[#1f4273] border-t-2 border-[#FFC83D]/70 px-2 pt-1.5 pb-2 flex items-center justify-around z-30 select-none shrink-0 shadow-[0_-4px_24px_rgba(23,52,93,0.6)] font-body"
     >
       {navItems.map((item) => {
         const isActive = currentTab === item.id;
@@ -73,22 +73,22 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
             <button
               key={item.id}
               onClick={() => handleTabClick(item.id)}
-              className={`relative -top-3 flex flex-col items-center justify-center transition-transform active:scale-90 cursor-pointer ${
+              className={`relative -top-2 flex flex-col items-center justify-center transition-transform active:scale-90 cursor-pointer min-w-[54px] min-h-[54px] touch-manipulation ${
                 isActive ? 'scale-105' : 'hover:scale-102'
               }`}
             >
               <div
-                className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg transition-all ${
+                className={`w-13 h-13 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shadow-lg transition-all ${
                   isActive
-                    ? 'bg-gradient-to-tr from-sky-400 via-blue-500 to-indigo-600 text-white shadow-[0_0_25px_rgba(56,189,248,0.8)] border-2 border-white'
-                    : 'bg-gradient-to-tr from-[#133785] to-[#1b4cb8] text-blue-200 border-2 border-blue-300/40 shadow'
+                    ? 'bg-gradient-to-tr from-[#ffe071] via-[#FFC83D] to-[#d49b10] text-[#4a2800] shadow-[0_0_26px_rgba(255,200,61,0.85)] border-2 border-white'
+                    : 'bg-gradient-to-tr from-[#1769D2] to-[#17345D] text-white border-2 border-[#FFC83D]/60 shadow-[0_4px_12px_rgba(23,52,93,0.6)]'
                 }`}
               >
-                <Swords className="w-7 h-7 drop-shadow" />
+                <Swords className="w-6 h-6 sm:w-7 sm:h-7 drop-shadow" />
               </div>
               <span
-                className={`text-[10px] font-black uppercase mt-1 tracking-wider ${
-                  isActive ? 'text-yellow-300' : 'text-blue-200'
+                className={`text-[10px] font-display uppercase mt-0.5 tracking-wider ${
+                  isActive ? 'text-[#FFC83D] drop-shadow' : 'text-blue-100'
                 }`}
               >
                 {item.label}
@@ -101,9 +101,9 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
           <button
             key={item.id}
             onClick={() => handleTabClick(item.id)}
-            className={`relative flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all cursor-pointer ${
+            className={`relative flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all cursor-pointer min-h-[44px] min-w-[48px] touch-manipulation ${
               isActive
-                ? 'text-yellow-300 scale-105'
+                ? 'text-[#FFC83D] scale-105'
                 : 'text-blue-200 hover:text-white active:scale-95'
             }`}
           >
@@ -111,15 +111,15 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
               {item.icon}
               {item.badge && (
                 <span
-                  className={`absolute -top-1.5 -right-3 text-[9px] px-1.5 py-0.2 rounded-full font-bold shadow ${item.badgeColor} animate-pulse`}
+                  className={`absolute -top-1.5 -right-3 text-[9px] px-1.5 py-0.2 rounded-full font-display shadow ${item.badgeColor} animate-pulse`}
                 >
                   {item.badge}
                 </span>
               )}
             </div>
             <span
-              className={`text-[10px] font-black mt-1 tracking-tight ${
-                isActive ? 'text-yellow-300' : 'text-blue-200'
+              className={`text-[10px] font-display mt-0.5 tracking-wide ${
+                isActive ? 'text-[#FFC83D] drop-shadow' : 'text-blue-200'
               }`}
             >
               {item.label}

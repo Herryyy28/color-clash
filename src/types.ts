@@ -157,6 +157,45 @@ export interface SpinReward {
   color: string;
 }
 
+export type AIDifficultyLevel = 'beginner' | 'easy' | 'normal' | 'hard' | 'expert';
+
+export interface SectorConfig extends LevelConfig {
+  sectorId: number;
+  subtitle: string;
+  description: string;
+  requiredTrophies: number;
+  difficulty: AIDifficultyLevel;
+  difficultyLabel: string;
+  difficultyColor: string;
+  recommendedStrength: number;
+  arenaTheme: {
+    name: string;
+    primaryColor: string;
+    accentColor: string;
+    bannerGradient: string;
+    icon: string;
+  };
+  opponentProfile: {
+    name: string;
+    title: string;
+    avatarId: string;
+    trophies: number;
+    deckCardIds: CardType[];
+    cardLevel: number;
+  };
+  rewards: {
+    coins: number;
+    cubes: number;
+    chestTier: 'wooden' | 'silver' | 'gold' | 'magical';
+    chestName: string;
+    firstClearBonus?: {
+      coins: number;
+      gems: number;
+      label: string;
+    };
+  };
+}
+
 export interface PlayerProfile {
   name: string;
   avatarId?: string;
@@ -167,6 +206,15 @@ export interface PlayerProfile {
   trophies: number;
   coins: number;
   gems: number;
+  cubes?: number;
+  matchesPlayed?: number;
+  wins?: number;
+  losses?: number;
+  recentResults?: ('win' | 'loss')[];
+  skillRating?: number;
+  highestSectorUnlocked?: number;
+  difficultyAdjustment?: number;
+  clearedSectors?: number[];
 }
 
 export type BattleEventType =

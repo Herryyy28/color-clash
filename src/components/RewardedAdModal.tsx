@@ -169,18 +169,29 @@ export const RewardedAdModal: React.FC<RewardedAdModalProps> = ({
   const rewardAmount = session?.rewardCoins || customRewardCoins || 100;
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#071940]/90 backdrop-blur-md flex items-center justify-center p-3 select-none">
-      <div className="relative w-full max-w-sm rounded-3xl bg-gradient-to-b from-[#1e5ecc] via-[#1646a8] to-[#0c2a6b] p-0.5 border-2 border-sky-300 shadow-[0_0_50px_rgba(30,94,204,0.6)] overflow-hidden flex flex-col">
-        {/* Ad Header Banner */}
-        <div className="w-full bg-[#123687] px-3.5 py-2.5 flex items-center justify-between border-b border-sky-300/40">
+    <div className="fixed inset-0 z-50 bg-[#071940]/90 backdrop-blur-md flex items-center justify-center p-3 safe-pt safe-pb select-none overflow-y-auto font-body">
+      <div className="relative w-full max-w-sm max-h-[calc(100dvh-var(--safe-top)-var(--safe-bottom)-24px)] overflow-y-auto scroll-touch rounded-3xl bg-[#0f2142] p-0.5 border-2 border-b-4 border-[#FFC83D] border-b-[#b38615] shadow-[0_0_50px_rgba(255,200,61,0.5)] flex flex-col">
+        {/* Google AdMob Top Bar */}
+        <div className="w-full bg-[#17345D] px-3.5 py-2 flex items-center justify-between border-b border-white/10 shrink-0">
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-            <div className="flex flex-col">
-              <span className="text-[10px] font-black uppercase tracking-wider text-sky-200">
-                Unity LevelPlay Mediation
-              </span>
-              <span className="text-xs font-black text-white flex items-center gap-1">
-                Rewarded Video Ad <span className="text-[9px] text-yellow-300 font-extrabold bg-amber-500/30 px-1 rounded">TEST</span>
+            {/* Google AdMob Logo Icon */}
+            <div className="w-6 h-6 rounded-md bg-white flex items-center justify-center shadow-sm p-0.5">
+              <svg viewBox="0 0 24 24" className="w-full h-full">
+                <path d="M12 2L2 7l10 5 10-5-10-5z" fill="#4285F4" />
+                <path d="M2 17l10 5 10-5M2 12l10 5 10-5" fill="none" stroke="#EA4335" strokeWidth="2.5" />
+              </svg>
+            </div>
+            <div className="flex flex-col leading-tight">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-black text-white tracking-wide">
+                  Google AdMob
+                </span>
+                <span className="text-[8px] bg-[#FFC83D] text-[#17345D] font-black px-1.5 py-0.2 rounded-sm uppercase tracking-wider">
+                  Ad · 1 of 1
+                </span>
+              </div>
+              <span className="text-[9px] text-[#F7E7BE]/80 font-mono">
+                ca-app-pub-3940256099942544
               </span>
             </div>
           </div>
@@ -188,79 +199,107 @@ export const RewardedAdModal: React.FC<RewardedAdModalProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsMuted(!isMuted)}
-              className="w-7 h-7 rounded-full bg-[#1a449e] border border-sky-300/50 flex items-center justify-center text-sky-200 hover:text-white transition active:scale-95"
+              className="w-7 h-7 rounded-full bg-[#1769D2]/40 border border-white/30 flex items-center justify-center text-white hover:text-[#FFC83D] transition active:scale-95"
             >
               {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
             </button>
             <button
               onClick={handleAttemptClose}
-              className="w-7 h-7 rounded-full bg-[#1a449e] border border-sky-300/50 flex items-center justify-center text-sky-200 hover:text-white transition active:scale-95"
+              className="w-7 h-7 rounded-full bg-[#1769D2]/40 border border-white/30 flex items-center justify-center text-white hover:text-[#F04452] transition active:scale-95"
               title="Close Ad"
             >
-              <X className="w-4 h-4" />
+              <X className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
 
         {/* Video Screen Area */}
-        <div className="relative w-full h-72 bg-gradient-to-br from-[#123687] via-[#0d2a6d] to-[#081d4a] flex flex-col items-center justify-center p-4 overflow-hidden border-b border-sky-300/30">
-          {/* Animated Background Rings */}
-          <div className="absolute w-60 h-60 rounded-full border border-sky-400/20 animate-ping pointer-events-none" />
-          <div className="absolute w-44 h-44 rounded-full border-2 border-dashed border-sky-300/30 animate-spin pointer-events-none" style={{ animationDuration: '20s' }} />
+        <div className="relative w-full h-60 sm:h-72 bg-gradient-to-br from-[#17345D] via-[#0e2448] to-[#071329] flex flex-col items-center justify-center p-4 overflow-hidden border-b border-white/10 shrink-0">
+          {/* Animated Background Atmosphere */}
+          <div className="absolute w-60 h-60 rounded-full border border-[#FFC83D]/20 animate-ping pointer-events-none" />
+          <div className="absolute w-44 h-44 rounded-full border-2 border-dashed border-[#1769D2]/30 animate-spin pointer-events-none" style={{ animationDuration: '25s' }} />
 
           {/* Ad Creative Artwork */}
           <div className="relative z-10 flex flex-col items-center text-center">
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-sky-400 via-blue-500 to-indigo-600 p-0.5 shadow-2xl border-2 border-white flex items-center justify-center transform hover:rotate-6 transition">
-              <span className="text-4xl animate-bounce">🪙</span>
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-[#FFC83D] via-[#ffe382] to-[#FFC83D] p-1 shadow-2xl border-2 border-white flex items-center justify-center transform hover:rotate-3 transition animate-bounce">
+              <span className="text-3xl sm:text-4xl">👑</span>
             </div>
 
-            <h3 className="text-lg font-black text-white mt-3 drop-shadow flex items-center gap-1.5">
-              Color Clash Gold Vault <Sparkles className="w-4 h-4 text-yellow-300" />
+            <h3 className="text-base sm:text-lg font-display text-white mt-2.5 drop-shadow flex items-center gap-1.5 tracking-wider">
+              ROYAL CLASH ARENA <Sparkles className="w-4 h-4 text-[#FFC83D]" />
             </h3>
-            <p className="text-xs text-sky-200 font-bold max-w-xs mt-1">
-              Watch the full sponsor clip to claim your reward of <strong className="text-yellow-300">+{rewardAmount} Coins</strong>!
+            <p className="text-[11px] sm:text-xs text-[#F7E7BE] font-semibold max-w-xs mt-1">
+              Watch this sponsored AdMob video clip to claim your reward!
             </p>
 
             {/* Countdown / Reward Status Badge */}
-            <div className="mt-4 flex items-center gap-2 bg-[#092257]/80 border-2 border-sky-300 px-3.5 py-1.5 rounded-full shadow-lg">
+            <div className="mt-3 sm:mt-4 flex items-center gap-2 bg-[#17345D] border-2 border-[#FFC83D] px-3.5 py-1.5 rounded-full shadow-lg">
               {rewardGranted ? (
-                <span className="text-xs font-black text-emerald-300 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" /> REWARD VERIFIED!
+                <span className="text-xs font-display text-[#79B957] flex items-center gap-1.5 tracking-wide font-black">
+                  <CheckCircle2 className="w-4 h-4 text-[#79B957]" /> REWARD GRANTED!
                 </span>
               ) : (
-                <span className="text-xs font-black text-yellow-300 flex items-center gap-1.5">
-                  <Play className="w-3.5 h-3.5 fill-current" /> Reward in {timeLeft}s
+                <span className="text-xs font-display text-[#FFC83D] flex items-center gap-1.5 tracking-wide font-black">
+                  <Play className="w-3.5 h-3.5 fill-current text-[#FFC83D]" />
+                  REWARD IN <span className="game-counter font-black text-white bg-[#1769D2] px-1.5 py-0.2 rounded">{timeLeft}s</span>
                 </span>
               )}
             </div>
           </div>
 
           {/* Progress Bar at bottom of screen */}
-          <div className="absolute bottom-0 left-0 right-0 h-2 bg-[#0a1e4a]">
+          <div className="absolute bottom-0 left-0 right-0 h-2 bg-[#17345D]">
             <div
-              className="h-full bg-gradient-to-r from-sky-400 via-amber-400 to-emerald-400 transition-all duration-100"
+              className="h-full bg-gradient-to-r from-[#FFC83D] via-[#79B957] to-[#FFC83D] transition-all duration-100"
               style={{ width: `${progress}%` }}
             />
           </div>
         </div>
 
+        {/* AdMob Play Store Install Banner Card */}
+        <div className="p-3 bg-[#17345D] flex items-center justify-between gap-3 border-b border-white/10 shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#1769D2] to-[#79B957] flex items-center justify-center text-xl shadow border border-white shrink-0">
+              ⚔️
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-xs font-display text-white truncate">
+                Royal Kingdom War
+              </span>
+              <span className="text-[10px] text-[#FFC83D] font-bold flex items-center gap-1">
+                ⭐⭐⭐⭐⭐ 4.9 <span className="text-[#F7E7BE]/70">· Free</span>
+              </span>
+            </div>
+          </div>
+
+          <button
+            onClick={() => {
+              sounds.playClick();
+              window.open('https://play.google.com/store', '_blank');
+            }}
+            className="py-1.5 px-3.5 rounded-xl btn-arena-green text-white font-display text-xs uppercase tracking-wider shadow shrink-0 cursor-pointer"
+          >
+            INSTALL
+          </button>
+        </div>
+
         {/* Ad Metadata & State Bar */}
-        <div className="p-3.5 bg-[#0f2f75] flex flex-col gap-2">
+        <div className="p-3 bg-[#0d1e38] flex flex-col gap-2 shrink-0">
           {/* Status Message or Error */}
           {errorMessage ? (
-            <div className="bg-rose-900/60 border border-rose-400 rounded-xl p-2 text-rose-200 text-xs font-bold flex items-center gap-1.5">
-              <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
+            <div className="bg-[#F04452]/20 border border-[#F04452] rounded-xl p-2 text-rose-200 text-xs font-bold flex items-center gap-1.5">
+              <AlertTriangle className="w-4 h-4 shrink-0 text-[#F04452]" />
               <span>{errorMessage}</span>
             </div>
           ) : rewardGranted ? (
-            <div className="bg-emerald-900/60 border border-emerald-400 rounded-xl p-2 text-emerald-200 text-xs font-black text-center animate-in zoom-in-95">
-              🎉 Claim recorded! +{rewardAmount} Coins credited to wallet!
+            <div className="bg-[#79B957]/30 border border-[#79B957] rounded-xl p-2 text-[#79B957] text-xs font-display text-center animate-in zoom-in-95 tracking-wide font-black">
+              🎉 AD COMPLETED! REWARD UNLOCKED &amp; VERIFIED!
             </div>
           ) : (
-            <div className="flex items-center justify-between text-[11px] text-sky-200 font-bold">
-              <span>Placement: <strong className="text-white">{placementId}</strong></span>
-              <span className="flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5 text-sky-300" /> Idempotent Nonce
+            <div className="flex items-center justify-between text-[11px] text-[#F7E7BE]/80 font-semibold">
+              <span>Placement: <strong className="text-white font-bold">{placementId}</strong></span>
+              <span className="flex items-center gap-1 text-[#79B957]">
+                <ShieldCheck className="w-3.5 h-3.5" /> Verified AdMob Nonce
               </span>
             </div>
           )}
@@ -272,46 +311,46 @@ export const RewardedAdModal: React.FC<RewardedAdModalProps> = ({
                 adMediationService.handleAdClosed(false);
                 onClose();
               }}
-              className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-500 text-teal-950 font-black text-xs uppercase tracking-wider shadow border border-white cursor-pointer active:scale-95 transition"
+              className="btn-royal-gold text-[#17345D] w-full py-2.5 rounded-xl font-display text-sm tracking-wider cursor-pointer shadow min-h-[44px]"
             >
-              Collect & Continue
+              COLLECT REWARD &amp; CONTINUE
             </button>
           ) : (
             <div className="flex gap-2">
               <button
                 onClick={handleAttemptClose}
-                className="flex-1 py-2 rounded-xl bg-[#143d99] hover:bg-[#1a4db8] text-sky-200 hover:text-white text-xs font-bold border border-sky-400/40 cursor-pointer active:scale-95 transition"
+                className="btn-royal-blue flex-1 py-2.5 rounded-xl font-display text-xs tracking-wider cursor-pointer shadow min-h-[44px]"
               >
-                Skip Video
+                SKIP AD
               </button>
-              <div className="flex-1 py-2 rounded-xl bg-[#0a235c] border border-yellow-400/40 text-yellow-300 text-xs font-black flex items-center justify-center gap-1">
-                <span>🪙</span> +{rewardAmount} Reward
+              <div className="flex-1 py-2.5 rounded-xl bg-[#17345D] border border-[#FFC83D]/50 text-[#FFC83D] text-xs font-display flex items-center justify-center gap-1 min-h-[44px] tracking-wide">
+                <span>🪙</span> +<span className="game-counter font-black">{rewardAmount}</span> REWARD
               </div>
             </div>
           )}
         </div>
 
-        {/* Skip Early Confirmation Sub-Modal */}
+        {/* AdMob Skip Early Confirmation Sub-Modal */}
         {showSkipWarning && (
           <div className="absolute inset-0 z-30 bg-[#071940]/95 backdrop-blur-md flex items-center justify-center p-4">
-            <div className="bg-gradient-to-b from-[#1848b3] to-[#0c2a6b] p-4 rounded-2xl border-2 border-amber-400 text-center flex flex-col items-center shadow-2xl animate-in zoom-in-95">
-              <AlertTriangle className="w-10 h-10 text-amber-400 mb-2 animate-bounce" />
-              <h4 className="text-sm font-black text-white">Forfeit Reward?</h4>
-              <p className="text-xs text-blue-100 mt-1 font-medium">
-                You must watch until the end to collect your <strong className="text-yellow-300">+{rewardAmount} Coins</strong>. If you leave now, no reward will be granted!
+            <div className="bg-[#17345D] p-4 rounded-2xl border-2 border-[#FFC83D] text-center flex flex-col items-center shadow-2xl animate-in zoom-in-95 max-w-xs">
+              <AlertTriangle className="w-10 h-10 text-[#FFC83D] mb-2 animate-bounce" />
+              <h4 className="text-base font-display text-white tracking-wider">CLOSE VIDEO AD?</h4>
+              <p className="text-xs text-[#F7E7BE] mt-1 font-semibold">
+                You must watch until the timer reaches zero to claim your reward. If you exit now, your reward will be forfeited!
               </p>
               <div className="flex gap-2 mt-4 w-full">
                 <button
                   onClick={handleResumeWatching}
-                  className="flex-1 py-2 px-3 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-500 text-teal-950 font-black text-xs uppercase cursor-pointer active:scale-95 shadow border border-white"
+                  className="btn-royal-gold text-[#17345D] flex-1 py-2 px-3 rounded-xl font-display text-xs tracking-wider cursor-pointer shadow"
                 >
-                  Keep Watching
+                  RESUME AD
                 </button>
                 <button
                   onClick={handleConfirmForfeit}
-                  className="py-2 px-3 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs uppercase cursor-pointer active:scale-95 shadow border border-rose-300"
+                  className="btn-battle-red text-white py-2 px-3 rounded-xl font-display text-xs tracking-wider cursor-pointer shadow"
                 >
-                  Forfeit
+                  FORFEIT
                 </button>
               </div>
             </div>
