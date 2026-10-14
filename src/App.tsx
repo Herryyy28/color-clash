@@ -15,6 +15,7 @@ import { SettingsView } from './components/SettingsView';
 import { NoAdsVipModal } from './components/NoAdsVipModal';
 import { VersusIntroModal } from './components/VersusIntroModal';
 import { AvatarSelectionModal } from './components/AvatarSelectionModal';
+import { BattleLog } from './components/BattleLog';
 import {
   Team,
   Card,
@@ -30,6 +31,7 @@ import {
   SpinReward,
   PlayerProfile,
   CardType,
+  BattleEvent,
 } from './types';
 import { ALL_CARDS, INITIAL_PLAYER_DECK, LEVELS } from './cardsData';
 import { sounds } from './audio';
@@ -119,6 +121,21 @@ export default function App() {
   const unitsRef = useRef(units);
   unitsRef.current = units;
 
+  // Battle Combat Event Log
+  const [battleEvents, setBattleEvents] = useState<BattleEvent[]>([]);
+  const lastTerritoryPercentRef = useRef<number>(50);
+
+  const addBattleEvent = useCallback((event: Omit<BattleEvent, 'id' | 'timestamp'>) => {
+    setBattleEvents((prev) => {
+      const newEvent: BattleEvent = {
+        ...event,
+        id: `be-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        timestamp: Date.now(),
+      };
+      return [newEvent, ...prev].slice(0, 5);
+    });
+  }, []);
+
   // Real-time chest unlock timer interval
   useEffect(() => {
     const interval = setInterval(() => {
@@ -182,6 +199,20 @@ export default function App() {
     setRedPercent(50);
     setTutorialMessage(lvl.tutorialTip ?? null);
 
+    // Initialize battle log with match start event
+    setBattleEvents([
+      {
+        id: `start-${Date.now()}`,
+        type: 'match_event',
+        text: 'Clash Commenced!',
+        subtext: `Sector ${lvl.level}`,
+        team: 'neutral',
+        timestamp: Date.now(),
+        icon: '⚔️',
+      },
+    ]);
+    lastTerritoryPercentRef.current = 50;
+
     // Hand populated from activeDeck
     setHand(activeDeck.slice(0, 4));
     const remainingCards = Object.values(ALL_CARDS).filter(
@@ -244,13 +275,55 @@ export default function App() {
     setBluePercent(bPercent);
     setRedPercent(rPercent);
 
+    // Track major territory captured events for BattleLog
+    const prevB = lastTerritoryPercentRef.current;
+    if (Math.abs(bPercent - prevB) >= 7) {
+      if (bPercent >= 55 && prevB < 55) {
+        addBattleEvent({
+          type: 'territory_captured',
+          text: `Blue Captured ${bPercent}% Territory`,
+          subtext: 'Territory lead secured',
+          team: 'blue',
+          icon: '🚩',
+        });
+        lastTerritoryPercentRef.current = bPercent;
+      } else if (rPercent >= 55 && (100 - prevB) < 55) {
+        addBattleEvent({
+          type: 'territory_captured',
+          text: `Red Captured ${rPercent}% Territory`,
+          subtext: 'Enemy territory push',
+          team: 'red',
+          icon: '🚩',
+        });
+        lastTerritoryPercentRef.current = bPercent;
+      } else if (bPercent >= 70 && prevB < 70) {
+        addBattleEvent({
+          type: 'territory_captured',
+          text: `Blue Dominating: ${bPercent}% Grid`,
+          subtext: 'High ground control',
+          team: 'blue',
+          icon: '🚩',
+        });
+        lastTerritoryPercentRef.current = bPercent;
+      } else if (rPercent >= 70 && (100 - prevB) < 70) {
+        addBattleEvent({
+          type: 'territory_captured',
+          text: `Red Dominating: ${rPercent}% Grid`,
+          subtext: 'Critical defence needed',
+          team: 'red',
+          icon: '🚩',
+        });
+        lastTerritoryPercentRef.current = bPercent;
+      }
+    }
+
     // Instant victory condition: 99% or 100% dominance
     if (bPercent >= 99 && gameState === 'playing') {
       setTimeout(() => {
         setGameState('victory');
       }, 500);
     }
-  }, [gameState]);
+  }, [gameState, addBattleEvent]);
 
   // Splat/paint tiles in a radius
   const splatGrid = useCallback((centerX: number, centerY: number, radius: number, team: Team) => {
@@ -303,6 +376,13 @@ export default function App() {
             setGameState('defeat');
           } else {
             // Sudden Death tie: grant +30s overtime
+            addBattleEvent({
+              type: 'match_event',
+              text: 'Sudden Death Overtime',
+              subtext: '+30s Golden Goal',
+              team: 'neutral',
+              icon: '⏱️',
+            });
             return 30;
           }
           return 0;
@@ -338,6 +418,13 @@ export default function App() {
 
         if (isSaw) {
           sounds.playSawWhir();
+          addBattleEvent({
+            type: 'saw_launch',
+            text: 'Red Buzz Saw Launched',
+            subtext: 'Lane assault incoming',
+            team: 'red',
+            icon: '🪚',
+          });
           setProjectiles((prev) => [
             ...prev,
             {
@@ -361,6 +448,15 @@ export default function App() {
           ]);
         } else {
           sounds.playCardDeploy();
+          if (pick.id === 'mortar' || pick.id === 'gatling' || pick.id === 'roller') {
+            addBattleEvent({
+              type: 'special_deploy',
+              text: `Red ${pick.name} Deployed`,
+              subtext: 'Enemy tactical unit',
+              team: 'red',
+              icon: pick.icon,
+            });
+          }
           setUnits((prev) => [
             ...prev,
             {
@@ -387,7 +483,7 @@ export default function App() {
     }, 1200);
 
     return () => clearInterval(aiInterval);
-  }, [gameState, battleCountdown, currentLevel]);
+  }, [gameState, battleCountdown, currentLevel, addBattleEvent]);
 
   // Main 60 FPS Combat, Recoil & Projectile Physics loop
   useEffect(() => {
@@ -404,6 +500,16 @@ export default function App() {
           if (unit.hp <= 0) {
             // Unit defeated
             sounds.playUnitExplode();
+            const cardData = ALL_CARDS[unit.cardId];
+            const unitName = cardData?.name || 'Turret';
+            const isBlue = unit.team === 'blue';
+            addBattleEvent({
+              type: 'turret_destroyed',
+              text: `${isBlue ? 'Blue' : 'Red'} ${unitName} Destroyed`,
+              subtext: isBlue ? 'Friendly loss' : 'Enemy base struck',
+              team: unit.team,
+              icon: '💥',
+            });
             // Emit death particles
             setParticles((p) => [
               ...p,
@@ -667,7 +773,7 @@ export default function App() {
 
     animId = requestAnimationFrame(gameTick);
     return () => cancelAnimationFrame(animId);
-  }, [gameState, splatGrid]);
+  }, [gameState, splatGrid, addBattleEvent]);
 
   // Card Deployment by Player
   const handleDeployCard = (card: Card, gx: number, gy: number) => {
@@ -686,6 +792,13 @@ export default function App() {
 
     if (isSaw) {
       sounds.playSawWhir();
+      addBattleEvent({
+        type: 'saw_launch',
+        text: 'Blue Buzz Saw Launched',
+        subtext: 'Lane shredder',
+        team: 'blue',
+        icon: '🪚',
+      });
       setProjectiles((prev) => [
         ...prev,
         {
@@ -709,6 +822,15 @@ export default function App() {
       ]);
     } else {
       sounds.playCardDeploy();
+      if (card.id === 'mortar' || card.id === 'gatling' || card.id === 'roller') {
+        addBattleEvent({
+          type: 'special_deploy',
+          text: `Blue ${card.name} Deployed`,
+          subtext: `Cost ${card.cost} Elixir`,
+          team: 'blue',
+          icon: card.icon,
+        });
+      }
       setUnits((prev) => [
         ...prev,
         {
@@ -1224,6 +1346,9 @@ export default function App() {
                 onDeployCard={handleDeployCard}
                 isGameOver={gameState !== 'playing' || battleCountdown !== null}
               />
+
+              {/* BattleLog Component on the Arena Grid */}
+              <BattleLog events={battleEvents} maxEvents={5} />
 
               {/* In-Arena Match Countdown Overlay */}
               {battleCountdown !== null && (

@@ -169,3 +169,20 @@ export interface PlayerProfile {
   gems: number;
 }
 
+export type BattleEventType =
+  | 'turret_destroyed'
+  | 'territory_captured'
+  | 'saw_launch'
+  | 'special_deploy'
+  | 'match_event';
+
+export interface BattleEvent {
+  id: string;
+  type: BattleEventType;
+  text: string;
+  subtext?: string;
+  team: Team | 'neutral';
+  timestamp: number;
+  icon?: string;
+}
+
