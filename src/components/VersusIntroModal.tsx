@@ -61,7 +61,7 @@ export const VersusIntroModal: React.FC<VersusIntroModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#070b16]/95 backdrop-blur-md flex flex-col items-center justify-between p-4 select-none overflow-hidden animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 bg-[#0a235c]/95 backdrop-blur-md flex flex-col items-center justify-between p-4 select-none overflow-hidden animate-in fade-in duration-200">
       {/* Background Cinematic Energy Rays */}
       <div className="absolute inset-0 opacity-20 pointer-events-none bg-[radial-gradient(#38bdf8_1.5px,transparent_1.5px)] [background-size:24px_24px]" />
       <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-blue-600/20 to-transparent pointer-events-none" />

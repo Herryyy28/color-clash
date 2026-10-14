@@ -33,6 +33,7 @@ import {
 } from './types';
 import { ALL_CARDS, INITIAL_PLAYER_DECK, LEVELS } from './cardsData';
 import { sounds } from './audio';
+import { saveService } from './saveService';
 import { Play, RotateCcw, Sparkles, Trophy, Home } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -40,7 +41,10 @@ export default function App() {
   // Navigation & High-level State
   const [gameState, setGameState] = useState<'splash' | 'menu' | 'playing' | 'victory' | 'defeat'>('menu');
   const [currentTab, setCurrentTab] = useState<NavTab>('battle');
-  const [currentLevelIndex, setCurrentLevelIndex] = useState(0);
+
+  // Load persistent game data on initialization
+  const initialSave = useRef(saveService.load()).current;
+  const [currentLevelIndex, setCurrentLevelIndex] = useState(initialSave.currentLevelIndex);
   const currentLevel: LevelConfig = LEVELS[currentLevelIndex] || LEVELS[0];
 
   // Modals
@@ -49,90 +53,28 @@ export default function App() {
   const [showNoAdsModal, setShowNoAdsModal] = useState(false);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [showVersusModal, setShowVersusModal] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(initialSave.isMuted);
+
+  // In-arena match countdown (3 -> 2 -> 1 -> CLASH!)
+  const [battleCountdown, setBattleCountdown] = useState<number | null>(null);
 
   // Player Progression Profile
-  const [playerProfile, setPlayerProfile] = useState<PlayerProfile>({
-    name: 'Commander',
-    avatarId: 'kid_headphones',
-    isVip: false,
-    level: 3,
-    exp: 280,
-    maxExp: 500,
-    trophies: 35,
-    coins: 650,
-    gems: 95,
-  });
+  const [playerProfile, setPlayerProfile] = useState<PlayerProfile>(initialSave.playerProfile);
 
   // Card Inventory
-  const [inventory, setInventory] = useState<Record<CardType, CardInventoryItem>>({
-    blaster: { id: 'blaster', level: 1, cards: 10, cardsRequired: 10, upgradeCost: 50 },
-    cannon: { id: 'cannon', level: 1, cards: 6, cardsRequired: 10, upgradeCost: 50 },
-    saw: { id: 'saw', level: 1, cards: 4, cardsRequired: 10, upgradeCost: 50 },
-    mortar: { id: 'mortar', level: 1, cards: 8, cardsRequired: 10, upgradeCost: 50 },
-    gatling: { id: 'gatling', level: 1, cards: 3, cardsRequired: 10, upgradeCost: 50 },
-    laser: { id: 'laser', level: 1, cards: 2, cardsRequired: 10, upgradeCost: 80 },
-    roller: { id: 'roller', level: 1, cards: 5, cardsRequired: 10, upgradeCost: 50 },
-  });
+  const [inventory, setInventory] = useState<Record<CardType, CardInventoryItem>>(initialSave.inventory);
 
   // Active 4-card Battle Deck
-  const [activeDeck, setActiveDeck] = useState<Card[]>([
-    ALL_CARDS.blaster,
-    ALL_CARDS.cannon,
-    ALL_CARDS.gatling,
-    ALL_CARDS.saw,
-  ]);
+  const [activeDeck, setActiveDeck] = useState<Card[]>(() => {
+    const cards = initialSave.activeDeckCardIds.map((id) => ALL_CARDS[id]).filter(Boolean);
+    return cards.length === 4 ? cards : [ALL_CARDS.blaster, ALL_CARDS.cannon, ALL_CARDS.gatling, ALL_CARDS.saw];
+  });
 
   // Chest Slots (4 slots with timers)
-  const [chestSlots, setChestSlots] = useState<ChestSlot[]>([
-    {
-      id: 'slot-1',
-      name: 'Silver Chest',
-      tier: 'silver',
-      unlockDurationSeconds: 12,
-      unlockStartedAt: Date.now() - 4000,
-      isOpened: false,
-      coinsReward: 180,
-      gemsReward: 6,
-      cardsReward: 8,
-    },
-    {
-      id: 'slot-2',
-      name: 'Gold Chest',
-      tier: 'gold',
-      unlockDurationSeconds: 60,
-      unlockStartedAt: null,
-      isOpened: false,
-      coinsReward: 420,
-      gemsReward: 15,
-      cardsReward: 18,
-    },
-    {
-      id: 'slot-3',
-      name: 'Empty Slot',
-      tier: 'wooden',
-      unlockDurationSeconds: 0,
-      unlockStartedAt: null,
-      isOpened: true,
-      coinsReward: 0,
-      gemsReward: 0,
-      cardsReward: 0,
-    },
-    {
-      id: 'slot-4',
-      name: 'Wooden Chest',
-      tier: 'wooden',
-      unlockDurationSeconds: 8,
-      unlockStartedAt: null,
-      isOpened: false,
-      coinsReward: 95,
-      gemsReward: 2,
-      cardsReward: 4,
-    },
-  ]);
+  const [chestSlots, setChestSlots] = useState<ChestSlot[]>(initialSave.chestSlots);
 
   // Daily spin state
-  const [hasFreeSpin, setHasFreeSpin] = useState(true);
+  const [hasFreeSpin, setHasFreeSpin] = useState(initialSave.hasFreeSpin);
 
   // Match stats
   const [timeRemaining, setTimeRemaining] = useState(180);
@@ -248,7 +190,41 @@ export default function App() {
     setNextCard(remainingCards[0] || ALL_CARDS.roller);
 
     setGameState('playing');
+    setBattleCountdown(3);
+    sounds.playClick();
   }, [activeDeck]);
+
+  // Battle countdown ticker (3 -> 2 -> 1 -> CLASH! -> start)
+  useEffect(() => {
+    if (gameState !== 'playing' || battleCountdown === null) return;
+
+    if (battleCountdown > 0) {
+      const timer = setTimeout(() => {
+        sounds.playClick();
+        setBattleCountdown((prev) => (prev !== null && prev > 1 ? prev - 1 : 0));
+      }, 700);
+      return () => clearTimeout(timer);
+    } else if (battleCountdown === 0) {
+      sounds.playBattleHorns();
+      const timer = setTimeout(() => {
+        setBattleCountdown(null);
+      }, 650);
+      return () => clearTimeout(timer);
+    }
+  }, [gameState, battleCountdown]);
+
+  // Auto-save player progression to localStorage
+  useEffect(() => {
+    saveService.save({
+      playerProfile,
+      inventory,
+      activeDeckCardIds: activeDeck.map((c) => c.id as CardType),
+      chestSlots,
+      currentLevelIndex,
+      isMuted,
+      hasFreeSpin,
+    });
+  }, [playerProfile, inventory, activeDeck, chestSlots, currentLevelIndex, isMuted, hasFreeSpin]);
 
   // Recalculate territory percentage whenever grid updates
   const updateTerritoryPercentages = useCallback((currentGrid: Team[][]) => {
@@ -307,23 +283,27 @@ export default function App() {
 
   // Energy regeneration & match timer loop
   useEffect(() => {
-    if (gameState !== 'playing') return;
+    if (gameState !== 'playing' || battleCountdown !== null) return;
 
-    const timer = setInterval(() => {
-      // Regenerate player energy (0.35 per 200ms -> ~1.75 per sec)
-      setEnergy((prev) => Math.min(maxEnergy, +(prev + 0.35).toFixed(1)));
-      // Regenerate enemy AI energy
-      enemyEnergyRef.current = Math.min(10, enemyEnergyRef.current + 0.3);
+    // Smooth continuous energy regeneration (~0.6 energy/sec)
+    const energyTimer = setInterval(() => {
+      setEnergy((prev) => Math.min(maxEnergy, +(prev + 0.15).toFixed(2)));
+      enemyEnergyRef.current = Math.min(10, +(enemyEnergyRef.current + 0.15).toFixed(2));
+    }, 250);
 
-      // Decrement match timer
+    // 1-second match timer countdown
+    const secondTimer = setInterval(() => {
       setTimeRemaining((prev) => {
         if (prev <= 1) {
           // Match ends: determine victor based on territory percentage
-          if (bluePercent >= redPercent) {
+          if (bluePercent > redPercent) {
             setGameState('victory');
-          } else {
+          } else if (redPercent > bluePercent) {
             sounds.playDefeat();
             setGameState('defeat');
+          } else {
+            // Sudden Death tie: grant +30s overtime
+            return 30;
           }
           return 0;
         }
@@ -331,12 +311,15 @@ export default function App() {
       });
     }, 1000);
 
-    return () => clearInterval(timer);
-  }, [gameState, bluePercent, redPercent, maxEnergy]);
+    return () => {
+      clearInterval(energyTimer);
+      clearInterval(secondTimer);
+    };
+  }, [gameState, battleCountdown, bluePercent, redPercent, maxEnergy]);
 
   // Enemy AI Logic Loop
   useEffect(() => {
-    if (gameState !== 'playing') return;
+    if (gameState !== 'playing' || battleCountdown !== null) return;
 
     const aiInterval = setInterval(() => {
       const now = Date.now();
@@ -404,11 +387,11 @@ export default function App() {
     }, 1200);
 
     return () => clearInterval(aiInterval);
-  }, [gameState, currentLevel]);
+  }, [gameState, battleCountdown, currentLevel]);
 
   // Main 60 FPS Combat, Recoil & Projectile Physics loop
   useEffect(() => {
-    if (gameState !== 'playing') return;
+    if (gameState !== 'playing' || battleCountdown !== null) return;
 
     let animId: number;
 
@@ -1225,8 +1208,6 @@ export default function App() {
                 const muted = sounds.toggleMute();
                 setIsMuted(muted);
               }}
-              onOpenTechModal={() => setShowTechModal(true)}
-              onOpenUnityModal={() => setShowUnityModal(true)}
             />
 
             {/* Battlefield Canvas */}
@@ -1241,11 +1222,25 @@ export default function App() {
                 draggedCard={draggedCard || selectedCard}
                 dragPos={dragPos}
                 onDeployCard={handleDeployCard}
-                isGameOver={gameState !== 'playing'}
+                isGameOver={gameState !== 'playing' || battleCountdown !== null}
               />
 
+              {/* In-Arena Match Countdown Overlay */}
+              {battleCountdown !== null && (
+                <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-40 bg-[#0a235c]/35 backdrop-blur-[2px]">
+                  <div className="flex flex-col items-center animate-in zoom-in-75 duration-200">
+                    <span className="text-6xl sm:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-200 via-amber-300 to-yellow-500 drop-shadow-[0_4px_16px_rgba(245,158,11,0.9)] filter">
+                      {battleCountdown > 0 ? battleCountdown : 'CLASH!'}
+                    </span>
+                    <span className="text-[10px] sm:text-xs font-black text-sky-200 uppercase tracking-widest mt-1 bg-[#123e9a]/90 px-3 py-0.5 rounded-full border border-sky-300/70 shadow-lg">
+                      Sector {currentLevel.level} Battle
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {/* Mascot Commander Tutorial bubble */}
-              {tutorialMessage && (
+              {tutorialMessage && battleCountdown === null && (
                 <CommanderTutorial
                   message={tutorialMessage}
                   onDismiss={() => setTutorialMessage(null)}
@@ -1264,7 +1259,7 @@ export default function App() {
               onSelectCard={setSelectedCard}
               onDragStartCard={handleDragStartCard}
               onSendEmote={handleSendEmote}
-              isGameOver={gameState !== 'playing'}
+              isGameOver={gameState !== 'playing' || battleCountdown !== null}
             />
           </>
         )}

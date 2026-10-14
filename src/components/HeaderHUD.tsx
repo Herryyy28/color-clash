@@ -1,7 +1,6 @@
 import React from 'react';
 import { Timer } from 'lucide-react';
 import { LevelConfig } from '../types';
-
 import { renderAvatarSvg } from './AvatarSelectionModal';
 
 interface HeaderHUDProps {
@@ -18,8 +17,6 @@ interface HeaderHUDProps {
   onOpenAvatarModal?: () => void;
   isMuted: boolean;
   onToggleMute: () => void;
-  onOpenTechModal?: () => void;
-  onOpenUnityModal?: () => void;
 }
 
 export const HeaderHUD: React.FC<HeaderHUDProps> = ({
@@ -35,8 +32,6 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
   onOpenAvatarModal,
   isMuted,
   onToggleMute,
-  onOpenTechModal,
-  onOpenUnityModal,
 }) => {
   const formatTime = (secs: number) => {
     const m = Math.floor(secs / 60);
@@ -45,8 +40,8 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
   };
 
   return (
-    <div className="w-full px-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))] pt-[max(0.25rem,env(safe-area-inset-top))] pb-1 select-none z-30 flex flex-col items-center bg-gradient-to-b from-[#1448b8]/70 via-[#123e9a]/40 to-transparent">
-      {/* 1. Top Mini Status & Currency Bar matching Reference Video */}
+    <div className="w-full px-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))] pt-[max(0.25rem,env(safe-area-inset-top))] pb-1 select-none z-30 flex flex-col items-center bg-gradient-to-b from-[#1448b8]/75 via-[#123e9a]/40 to-transparent">
+      {/* 1. Top Mini Status & Currency Bar */}
       <div className="w-full max-w-md flex items-center justify-between px-1 mb-1 text-[11px] font-black">
         {/* Currencies Pill Group */}
         <div className="flex items-center gap-1.5 sm:gap-2">
@@ -74,7 +69,7 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
           )}
         </div>
 
-        {/* Action Controls: Sound mute toggle & Info */}
+        {/* Action Controls: Sound mute toggle */}
         <div className="flex items-center gap-1.5">
           <button
             onClick={onToggleMute}
@@ -83,15 +78,6 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
           >
             {isMuted ? '🔇' : '🔊'}
           </button>
-          {onOpenUnityModal && (
-            <button
-              onClick={onOpenUnityModal}
-              className="px-2 py-0.5 rounded-lg bg-gradient-to-b from-[#256cf0] to-[#1c55c5] border border-sky-300/70 text-[9px] font-black text-white hover:from-[#2e74f8] hover:to-[#2262dc] cursor-pointer active:scale-95 transition shadow-md"
-              title="Unity Spec & Guide"
-            >
-              Unity 6
-            </button>
-          )}
         </div>
       </div>
 
@@ -117,8 +103,8 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
           </div>
         </div>
 
-        {/* Center: Dual Score Indicators, Territory Progress Bar & Countdown Timer (Responsive Proportional Flexbox) */}
-        <div className="flex-1 min-w-0 flex flex-col items-center justify-center px-1">
+        {/* Center: Dual Score Indicators, Territory Progress Bar & Timer (Responsive Proportional Flexbox Container) */}
+        <div className="flex-1 min-w-0 flex flex-col items-center justify-center px-1 sm:px-2 w-full">
           {/* Territory % Tags: Proportional Flex Row */}
           <div className="w-full flex items-center justify-between px-1 mb-0.5 z-20">
             <span className="bg-gradient-to-r from-[#0284c7] to-[#38bdf8] text-white font-black text-[10px] sm:text-xs px-2.5 py-0.5 rounded-full shadow-md border-2 border-white leading-none shrink-0">
@@ -146,12 +132,14 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
             />
           </div>
 
-          {/* Countdown Clock with Light Blue Gradient Container */}
-          <div className="flex items-center gap-1.5 mt-1 bg-gradient-to-r from-[#1a55c6] via-[#2267ea] to-[#1a55c6] border border-sky-300/70 px-3 py-0.5 rounded-full text-[10px] sm:text-[11px] font-black text-white shadow-md">
-            <Timer className="w-3 h-3 text-sky-300 shrink-0" />
-            <span className={timeRemaining < 30 ? 'text-amber-300 animate-pulse font-extrabold' : 'text-white'}>
-              {formatTime(timeRemaining)}
-            </span>
+          {/* Match Countdown Clock (Responsive Proportional Flexbox Container) */}
+          <div className="w-full flex items-center justify-center mt-1">
+            <div className="flex items-center gap-1.5 bg-gradient-to-r from-[#1a55c6] via-[#2267ea] to-[#1a55c6] border border-sky-300/70 px-3 py-0.5 rounded-full text-[10px] sm:text-[11px] font-black text-white shadow-md">
+              <Timer className="w-3 h-3 text-sky-300 shrink-0" />
+              <span className={timeRemaining < 30 ? 'text-amber-300 animate-pulse font-extrabold' : 'text-white'}>
+                {formatTime(timeRemaining)}
+              </span>
+            </div>
           </div>
         </div>
 
