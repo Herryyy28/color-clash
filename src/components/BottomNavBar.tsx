@@ -62,7 +62,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
   return (
     <nav
       aria-label="Game navigation"
-      className="w-full bg-[#0a101f] border-t border-slate-800/80 px-2 py-1.5 flex items-center justify-around z-30 select-none shrink-0"
+      className="w-full bg-gradient-to-t from-[#0a245e] via-[#0d2d74] to-[#10368a] border-t-2 border-blue-400/50 px-2 py-1.5 flex items-center justify-around z-30 select-none shrink-0 shadow-[0_-4px_20px_rgba(14,165,233,0.2)]"
     >
       {navItems.map((item) => {
         const isActive = currentTab === item.id;
@@ -80,15 +80,15 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
               <div
                 className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg transition-all ${
                   isActive
-                    ? 'bg-gradient-to-tr from-sky-500 via-blue-600 to-indigo-600 text-white shadow-[0_0_20px_rgba(56,189,248,0.7)] border-2 border-white'
-                    : 'bg-gradient-to-tr from-slate-800 to-slate-700 text-slate-300 border border-slate-600'
+                    ? 'bg-gradient-to-tr from-sky-400 via-blue-500 to-indigo-600 text-white shadow-[0_0_25px_rgba(56,189,248,0.8)] border-2 border-white'
+                    : 'bg-gradient-to-tr from-[#133785] to-[#1b4cb8] text-blue-200 border-2 border-blue-300/40 shadow'
                 }`}
               >
                 <Swords className="w-7 h-7 drop-shadow" />
               </div>
               <span
                 className={`text-[10px] font-black uppercase mt-1 tracking-wider ${
-                  isActive ? 'text-sky-400' : 'text-slate-400'
+                  isActive ? 'text-yellow-300' : 'text-blue-200'
                 }`}
               >
                 {item.label}
@@ -103,8 +103,8 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
             onClick={() => handleTabClick(item.id)}
             className={`relative flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all cursor-pointer ${
               isActive
-                ? 'text-sky-400 scale-105'
-                : 'text-slate-400 hover:text-slate-200 active:scale-95'
+                ? 'text-yellow-300 scale-105'
+                : 'text-blue-200 hover:text-white active:scale-95'
             }`}
           >
             <div className="relative">
@@ -118,8 +118,8 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
               )}
             </div>
             <span
-              className={`text-[10px] font-bold mt-1 tracking-tight ${
-                isActive ? 'text-sky-400 font-black' : 'text-slate-400'
+              className={`text-[10px] font-black mt-1 tracking-tight ${
+                isActive ? 'text-yellow-300' : 'text-blue-200'
               }`}
             >
               {item.label}

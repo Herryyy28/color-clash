@@ -375,11 +375,31 @@ class SoundEngine {
       osc.frequency.value = freq;
       const noteTime = startTime + idx * 0.07;
       gain.gain.setValueAtTime(0.2, noteTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, noteTime + 0.25);
       osc.connect(gain);
       gain.connect(this.ctx!.destination);
       osc.start(noteTime);
       osc.stop(noteTime + 0.3);
+    });
+  }
+
+  // Battle horns fanfare for VS intro
+  public playBattleHorns() {
+    if (this.isMuted) return;
+    this.initCtx();
+    if (!this.ctx) return;
+    const chords = [220, 277.18, 329.63, 440]; // A major triumphant horn
+    const startTime = this.ctx.currentTime;
+    chords.forEach((freq) => {
+      const osc = this.ctx!.createOscillator();
+      const gain = this.ctx!.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(freq, startTime);
+      gain.gain.setValueAtTime(0.12, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.6);
+      osc.connect(gain);
+      gain.connect(this.ctx!.destination);
+      osc.start(startTime);
+      osc.stop(startTime + 0.65);
     });
   }
 }

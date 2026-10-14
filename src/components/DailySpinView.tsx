@@ -102,22 +102,22 @@ export const DailySpinView: React.FC<DailySpinViewProps> = ({
   const radius = 140;
 
   return (
-    <div className="w-full h-full flex flex-col items-center justify-between p-3.5 select-none bg-gradient-to-b from-[#0c1322] via-[#091122] to-[#070b14] text-white overflow-hidden">
+    <div className="w-full h-full flex flex-col items-center justify-between p-3.5 select-none bg-gradient-to-b from-[#1448b8] via-[#0f3894] to-[#0a296e] text-white overflow-hidden">
       {/* Top Header */}
-      <div className="w-full flex items-center justify-between pb-2 border-b border-slate-800 shrink-0">
+      <div className="w-full flex items-center justify-between pb-2 border-b border-blue-400/30 shrink-0">
         <div>
-          <h1 className="text-lg font-black text-white flex items-center gap-1.5">
+          <h1 className="text-lg font-black text-white flex items-center gap-1.5 drop-shadow">
             Lucky Spin <Gift className="w-4 h-4 text-amber-400" />
           </h1>
-          <span className="text-[11px] text-slate-400">
+          <span className="text-[11px] text-blue-100 font-bold">
             Spin daily for coins, gems & cards!
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 bg-black/40 border border-yellow-500/40 px-2 py-0.5 rounded-xl text-xs font-black text-yellow-300">
+          <div className="flex items-center gap-1 bg-[#0c2a6b] border border-yellow-400/40 px-2 py-0.5 rounded-xl text-xs font-black text-yellow-300 shadow">
             <span>🪙</span> {playerCoins}
           </div>
-          <div className="flex items-center gap-1 bg-black/40 border border-emerald-500/40 px-2 py-0.5 rounded-xl text-xs font-black text-emerald-300">
+          <div className="flex items-center gap-1 bg-[#0c2a6b] border border-emerald-400/40 px-2 py-0.5 rounded-xl text-xs font-black text-emerald-300 shadow">
             <span>💎</span> {playerGems}
           </div>
         </div>
@@ -126,12 +126,12 @@ export const DailySpinView: React.FC<DailySpinViewProps> = ({
       {/* Wheel Container */}
       <div className="relative my-auto flex flex-col items-center justify-center">
         {/* Top Indicator Arrow Needle */}
-        <div className="z-20 -mb-4 flex flex-col items-center drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]">
+        <div className="z-20 -mb-4 flex flex-col items-center drop-shadow-[0_4px_8px_rgba(10,30,80,0.6)]">
           <div className="w-6 h-7 bg-gradient-to-b from-amber-300 to-amber-500 clip-triangle flex items-center justify-center shadow-lg border-x-2 border-t-2 border-white [clip-path:polygon(50%_100%,0%_0%,100%_0%)]" />
         </div>
 
         {/* Outer Wheel Glow Rim */}
-        <div className="relative w-72 h-72 rounded-full p-2 bg-gradient-to-tr from-amber-500 via-sky-500 to-indigo-600 shadow-[0_0_40px_rgba(56,189,248,0.4)] border-4 border-slate-900 flex items-center justify-center">
+        <div className="relative w-72 h-72 rounded-full p-2 bg-gradient-to-tr from-amber-400 via-sky-400 to-indigo-500 shadow-[0_0_40px_rgba(56,189,248,0.5)] border-4 border-white flex items-center justify-center">
           {/* SVG Rotating Slices */}
           <svg
             className="w-full h-full rounded-full"
@@ -160,8 +160,8 @@ export const DailySpinView: React.FC<DailySpinViewProps> = ({
                 <g key={reward.id}>
                   <path
                     d={pathData}
-                    fill={i % 2 === 0 ? '#1e293b' : '#0f172a'}
-                    stroke="#334155"
+                    fill={i % 2 === 0 ? '#1e4db8' : '#143b92'}
+                    stroke="#38bdf8"
                     strokeWidth="1.5"
                   />
                   {/* Text and Icon */}
@@ -197,10 +197,10 @@ export const DailySpinView: React.FC<DailySpinViewProps> = ({
           <button
             disabled={isSpinning}
             onClick={handleSpin}
-            className="absolute z-10 w-20 h-20 rounded-full bg-gradient-to-tr from-amber-400 via-yellow-300 to-amber-500 text-slate-950 font-black text-sm tracking-wider shadow-[0_4px_15px_rgba(245,158,11,0.8)] border-4 border-slate-900 flex flex-col items-center justify-center cursor-pointer active:scale-90 transition disabled:opacity-80"
+            className="absolute z-10 w-20 h-20 rounded-full bg-gradient-to-tr from-amber-400 via-yellow-300 to-amber-500 text-amber-950 font-black text-sm tracking-wider shadow-[0_4px_15px_rgba(245,158,11,0.8)] border-4 border-white flex flex-col items-center justify-center cursor-pointer active:scale-90 transition disabled:opacity-80"
           >
             <span>{isSpinning ? '...' : 'SPIN'}</span>
-            <span className="text-[9px] font-black text-slate-900/80">FREE</span>
+            <span className="text-[9px] font-black text-amber-950/80">FREE</span>
           </button>
         </div>
       </div>
@@ -210,39 +210,40 @@ export const DailySpinView: React.FC<DailySpinViewProps> = ({
         <button
           disabled={isSpinning}
           onClick={handleSpin}
-          className="w-full max-w-xs py-3.5 px-6 rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-slate-950 font-black text-base tracking-wide shadow-lg border-2 border-white cursor-pointer active:scale-95 transition flex items-center justify-center gap-2 disabled:opacity-50"
+          className="w-full max-w-xs py-3.5 px-6 rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-amber-950 font-black text-base tracking-wide shadow-lg border-2 border-white cursor-pointer active:scale-95 transition flex items-center justify-center gap-2 disabled:opacity-50"
         >
           <Gift className="w-5 h-5" />
           {isSpinning ? 'SPINNING...' : 'FREE DAILY SPIN'}
         </button>
-        <span className="text-[10px] font-bold text-slate-400 mt-1.5">
+        <span className="text-[10px] font-bold text-blue-200 mt-1.5">
           Resets daily. All prizes credited instantly!
         </span>
       </div>
 
       {/* Won Reward Popup */}
       {wonReward && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="relative w-full max-w-xs bg-gradient-to-b from-slate-900 to-slate-950 rounded-3xl p-6 border-2 border-amber-400 shadow-2xl flex flex-col items-center text-center animate-in zoom-in-95">
+        <div className="fixed inset-0 z-50 bg-[#071940]/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="relative w-full max-w-xs bg-gradient-to-b from-[#1844a8] via-[#123687] to-[#0a235c] rounded-3xl p-6 border-2 border-amber-300 shadow-2xl flex flex-col items-center text-center animate-in zoom-in-95">
             <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-amber-400 to-yellow-500 flex items-center justify-center text-4xl shadow-xl border-2 border-white mb-2 animate-bounce">
               {wonReward.icon}
             </div>
-            <span className="text-xs font-black text-amber-400 uppercase tracking-widest">
+            <span className="text-xs font-black text-yellow-300 uppercase tracking-widest">
               Congratulations!
             </span>
-            <h2 className="text-2xl font-black text-white mt-1">
+            <h2 className="text-2xl font-black text-white mt-1 drop-shadow">
               You Won {wonReward.label}!
             </h2>
-            <p className="text-xs text-slate-300 mt-1">
+            <p className="text-xs text-blue-100 mt-1 font-medium">
               Reward added to your inventory.
             </p>
 
             <button
               onClick={() => {
+                sounds.playClick();
                 onClaimReward(wonReward);
                 setWonReward(null);
               }}
-              className="mt-5 w-full py-3 px-6 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-500 text-slate-950 font-black text-sm uppercase tracking-wider shadow-lg border border-white cursor-pointer active:scale-95 transition"
+              className="mt-4 w-full py-3 rounded-2xl bg-gradient-to-r from-emerald-400 to-teal-500 hover:from-emerald-300 text-teal-950 font-black text-sm uppercase tracking-wider shadow border-2 border-white cursor-pointer active:scale-95"
             >
               CLAIM REWARD
             </button>

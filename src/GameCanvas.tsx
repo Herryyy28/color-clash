@@ -79,10 +79,10 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       const cellW = arenaW / COLS;
       const cellH = arenaH / ROWS;
 
-      // Outer bezel with white elevated rim and drop shadow
+      // Outer bezel with white elevated rim and soft royal shadow
       ctx.save();
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.75)';
-      ctx.shadowBlur = 24;
+      ctx.shadowColor = 'rgba(12, 36, 95, 0.5)';
+      ctx.shadowBlur = 20;
       ctx.shadowOffsetY = 6;
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
@@ -90,8 +90,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       ctx.fill();
       ctx.restore();
 
-      // Inner stadium background
-      ctx.fillStyle = '#0f172a';
+      // Inner stadium background (Color Clash royal stadium navy)
+      ctx.fillStyle = '#0d2d74';
       ctx.beginPath();
       ctx.roundRect(paddingX, paddingY, arenaW, arenaH, 10);
       ctx.fill();
@@ -103,10 +103,10 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           const cellX = paddingX + c * cellW;
           const cellY = paddingY + r * cellH;
 
-          // Colors matching the video
-          let fillColor = '#334155';
-          let borderColor = '#475569';
-          let highlightColor = '#64748b';
+          // Colors matching the video: vibrant royal blue, ruby red, and crisp neutral stadium tiles
+          let fillColor = '#143d8d';
+          let borderColor = '#1e52b8';
+          let highlightColor = '#2e6de0';
 
           if (owner === 'blue') {
             fillColor = '#0284c7'; // vibrant azure blue
@@ -239,14 +239,14 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         const uY = paddingY + (unit.y + 0.5) * cellH;
         const isBlue = unit.team === 'blue';
         const primaryColor = isBlue ? '#0284c7' : '#e11d48';
-        const darkColor = isBlue ? '#0f172a' : '#450a0a';
+        const darkColor = isBlue ? '#1e40af' : '#991b1b';
         const accentColor = isBlue ? '#38bdf8' : '#fb7185';
 
         ctx.save();
         ctx.translate(uX, uY);
 
-        // Unit Drop Shadow
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+        // Unit Drop Shadow (Soft navy tint)
+        ctx.fillStyle = 'rgba(12, 36, 95, 0.35)';
         ctx.beginPath();
         ctx.ellipse(0, cellH * 0.35, cellW * 0.75, cellH * 0.4, 0, 0, Math.PI * 2);
         ctx.fill();
@@ -361,42 +361,28 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           ctx.restore();
         }
 
-        // Level Pill Badge (just like in video: "Lvl. 1" or "Lvl. 3" white pill!)
-        const badgeY = -cellH * 0.85;
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.roundRect(-cellW * 0.55, badgeY, cellW * 1.1, cellH * 0.42, 4);
-        ctx.fill();
-        ctx.strokeStyle = '#0f172a';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-
-        ctx.fillStyle = '#0f172a';
-        ctx.font = `bold ${Math.max(9, Math.floor(cellH * 0.3))}px Fredoka, sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(`Lvl.${unit.level}`, 0, badgeY + cellH * 0.21);
-
-        // Passive Ability Icon Badge (e.g. 🛡️ Shield, ⚡ Speed Boost, 💨 Surge)
+        // Passive Ability Icon Badge at top (e.g. 🛡️ Shield, ⚡ Speed Boost, 💨 Surge)
         if (unit.passive) {
-          const pBadgeX = cellW * 0.65;
+          const badgeY = -cellH * 0.75;
           ctx.fillStyle = '#0f172a';
           ctx.beginPath();
-          ctx.arc(pBadgeX, badgeY + cellH * 0.21, cellH * 0.24, 0, Math.PI * 2);
+          ctx.arc(0, badgeY, cellH * 0.26, 0, Math.PI * 2);
           ctx.fill();
           ctx.strokeStyle = unit.shieldHp > 0 ? '#38bdf8' : '#f59e0b';
           ctx.lineWidth = 1.2;
           ctx.stroke();
 
-          ctx.font = `${Math.max(9, Math.floor(cellH * 0.26))}px sans-serif`;
-          ctx.fillText(unit.passive.icon, pBadgeX, badgeY + cellH * 0.23);
+          ctx.font = `${Math.max(9, Math.floor(cellH * 0.28))}px sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(unit.passive.icon, 0, badgeY + 0.5);
         }
 
         // HP & Shield Bars under unit
         const hpPercent = Math.max(0, unit.hp / unit.maxHp);
         const hpBarW = cellW * 1.1;
         const hpBarH = 3.5;
-        const hpBarY = cellH * 0.78;
+        const hpBarY = cellH * 0.76;
 
         // Passive Ability Dynamic Icon directly above the Health Bar (with grow/shrink pulse)
         if (unit.passive) {
@@ -449,17 +435,71 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         if (unit.maxShieldHp > 0 && unit.shieldHp > 0) {
           const shieldPercent = Math.max(0, Math.min(1, unit.shieldHp / unit.maxShieldHp));
           const shieldBarY = hpBarY - 4.5;
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+          ctx.fillStyle = 'rgba(10, 32, 85, 0.85)';
           ctx.fillRect(-hpBarW / 2, shieldBarY, hpBarW, 2.5);
           ctx.fillStyle = '#38bdf8';
           ctx.fillRect(-hpBarW / 2, shieldBarY, hpBarW * shieldPercent, 2.5);
         }
 
         // Main Health Bar (Green for Blue, Red for Red)
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        ctx.fillStyle = 'rgba(10, 32, 85, 0.85)';
         ctx.fillRect(-hpBarW / 2, hpBarY, hpBarW, hpBarH);
         ctx.fillStyle = isBlue ? '#22c55e' : '#ef4444';
         ctx.fillRect(-hpBarW / 2, hpBarY, hpBarW * hpPercent, hpBarH);
+
+        // Small, color-coded level label (e.g., 'Lv. 3') below the unit icon on the battlefield
+        const lvl = unit.level || 1;
+        let lvlBg = 'rgba(16, 46, 115, 0.92)';
+        let lvlBorder = '#94a3b8';
+        let lvlText = '#e2e8f0';
+
+        if (lvl >= 5) {
+          // Gold / Legendary tier
+          lvlBg = 'rgba(120, 53, 15, 0.92)';
+          lvlBorder = '#f59e0b';
+          lvlText = '#fef08a';
+        } else if (lvl >= 4) {
+          // Purple / Epic tier
+          lvlBg = 'rgba(88, 28, 135, 0.92)';
+          lvlBorder = '#c084fc';
+          lvlText = '#f3e8ff';
+        } else if (lvl >= 3) {
+          // Neon Sky Blue (Player) / Ruby Red (Enemy) - Level 3
+          lvlBg = isBlue ? 'rgba(12, 74, 110, 0.92)' : 'rgba(136, 19, 55, 0.92)';
+          lvlBorder = isBlue ? '#38bdf8' : '#fb7185';
+          lvlText = isBlue ? '#7dd3fc' : '#fecdd3';
+        } else if (lvl === 2) {
+          // Emerald Green tier
+          lvlBg = 'rgba(6, 78, 59, 0.92)';
+          lvlBorder = '#34d399';
+          lvlText = '#a7f3d0';
+        } else {
+          // Silver / Slate tier - Level 1
+          lvlBg = 'rgba(30, 41, 59, 0.9)';
+          lvlBorder = '#94a3b8';
+          lvlText = '#cbd5e1';
+        }
+
+        const lvlLabelY = hpBarY + hpBarH + 2.5;
+        const lvlPillW = Math.max(24, cellW * 0.68);
+        const lvlPillH = Math.max(9, Math.floor(cellH * 0.28));
+
+        ctx.save();
+        ctx.fillStyle = lvlBg;
+        ctx.beginPath();
+        ctx.roundRect(-lvlPillW / 2, lvlLabelY, lvlPillW, lvlPillH, 3);
+        ctx.fill();
+
+        ctx.strokeStyle = lvlBorder;
+        ctx.lineWidth = 1.1;
+        ctx.stroke();
+
+        ctx.font = `800 ${Math.max(7.5, Math.floor(cellH * 0.21))}px Fredoka, Nunito, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = lvlText;
+        ctx.fillText(`Lv. ${lvl}`, 0, lvlLabelY + lvlPillH / 2 + 0.5);
+        ctx.restore();
 
         ctx.restore();
       });
@@ -527,8 +567,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           const arc = p.arcProgress ?? 0;
           const altitude = Math.sin(arc * Math.PI) * cellH * 3.5;
 
-          // Shadow on the ground
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+          // Shadow on the ground (Soft royal shadow)
+          ctx.fillStyle = 'rgba(10, 30, 80, 0.35)';
           ctx.beginPath();
           ctx.ellipse(pX, pY, cellW * 0.35, cellH * 0.2, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -598,7 +638,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         ctx.globalAlpha = Math.max(0, ft.alpha);
         ctx.font = `800 ${Math.max(12, Math.floor(cellH * 0.5))}px Fredoka, sans-serif`;
         ctx.fillStyle = ft.color;
-        ctx.strokeStyle = '#000000';
+        ctx.strokeStyle = '#0a2360';
         ctx.lineWidth = 2.5;
         ctx.textAlign = 'center';
         ctx.strokeText(ft.text, ftX, ftY);
@@ -622,7 +662,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
         // Speech bubble bg
         ctx.fillStyle = '#ffffff';
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+        ctx.shadowColor = 'rgba(12, 36, 95, 0.35)';
         ctx.shadowBlur = 8;
         ctx.beginPath();
         ctx.roundRect(-22, -22, 44, 44, 12);
@@ -679,7 +719,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           width={420}
           height={630}
           onPointerUp={handlePointerUp}
-          className="w-full h-full touch-none rounded-xl bg-slate-900 border border-slate-700/60 shadow-2xl"
+          className="w-full h-full touch-none rounded-xl bg-[#0d2d74] border-2 border-blue-400/40 shadow-[0_4px_25px_rgba(14,165,233,0.35)]"
         />
 
         {/* Floating Unit Active Passive Indicator Badges using .animate-ability-pulse */}

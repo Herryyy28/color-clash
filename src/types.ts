@@ -159,6 +159,8 @@ export interface SpinReward {
 
 export interface PlayerProfile {
   name: string;
+  avatarId?: string;
+  isVip?: boolean;
   level: number;
   exp: number;
   maxExp: number;
@@ -166,3 +168,4 @@ export interface PlayerProfile {
   coins: number;
   gems: number;
 }
+

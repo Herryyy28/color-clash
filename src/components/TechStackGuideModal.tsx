@@ -9,33 +9,33 @@ export const TechStackGuideModal: React.FC<TechStackGuideModalProps> = ({ onClos
   const [activeTab, setActiveTab] = useState<'recommendation' | 'comparison' | 'architecture'>('recommendation');
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-5">
-      <div className="relative w-full max-w-2xl bg-slate-900 border-2 border-indigo-500/60 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 bg-[#071940]/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-5">
+      <div className="relative w-full max-w-2xl bg-gradient-to-b from-[#143c8c] via-[#0f2e6e] to-[#0a235c] border-2 border-indigo-400 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800 bg-slate-950/60">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-blue-400/40 bg-[#0a235c]">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-lg">
               <Cpu className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-black text-white leading-tight">
+              <h2 className="text-lg font-black text-white leading-tight drop-shadow">
                 Game Engine Tech Recommendation
               </h2>
-              <p className="text-xs text-indigo-300 font-medium">
+              <p className="text-xs text-indigo-200 font-medium">
                 Analysis for Color Clash: Unity vs. Godot 4 vs. WebGL
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition cursor-pointer"
+            className="w-8 h-8 rounded-full bg-[#1b4cb8] hover:bg-[#2563eb] text-white flex items-center justify-center border-2 border-white/60 transition cursor-pointer shadow active:scale-95"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex border-b border-slate-800 bg-slate-950/40 px-5 pt-2 gap-2 text-xs font-bold">
+        <div className="flex border-b border-blue-400/40 bg-[#081d4a] px-5 pt-2 gap-2 text-xs font-bold">
           <button
             onClick={() => setActiveTab('recommendation')}
             className={`pb-2.5 px-3 border-b-2 transition cursor-pointer ${
@@ -118,12 +118,12 @@ export const TechStackGuideModal: React.FC<TechStackGuideModalProps> = ({ onClos
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                <div className="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800">
+                <div className="bg-[#081d47] p-3.5 rounded-xl border border-blue-400/30 shadow">
                   <h4 className="text-xs font-bold text-sky-400 flex items-center gap-1.5 mb-1.5">
                     <CheckCircle className="w-3.5 h-3.5 text-sky-400" />
                     When to Choose Unity
                   </h4>
-                  <ul className="text-xs space-y-1 text-slate-300 list-disc list-inside">
+                  <ul className="text-xs space-y-1 text-blue-100 list-disc list-inside">
                     <li>Publishing on Google Play & App Store</li>
                     <li>Hypercasual monetization (AppLovin, Unity Ads)</li>
                     <li>URP Shader Graph for liquid paint physics</li>
@@ -131,12 +131,12 @@ export const TechStackGuideModal: React.FC<TechStackGuideModalProps> = ({ onClos
                   </ul>
                 </div>
 
-                <div className="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800">
-                  <h4 className="text-xs font-bold text-teal-400 flex items-center gap-1.5 mb-1.5">
-                    <CheckCircle className="w-3.5 h-3.5 text-teal-400" />
+                <div className="bg-[#081d47] p-3.5 rounded-xl border border-blue-400/30 shadow">
+                  <h4 className="text-xs font-bold text-teal-300 flex items-center gap-1.5 mb-1.5">
+                    <CheckCircle className="w-3.5 h-3.5 text-teal-300" />
                     When to Choose Godot 4
                   </h4>
-                  <ul className="text-xs space-y-1 text-slate-300 list-disc list-inside">
+                  <ul className="text-xs space-y-1 text-blue-100 list-disc list-inside">
                     <li>100% Free & open source (no revenue cuts)</li>
                     <li>Faster iteration & lighter IDE (no 30GB installs)</li>
                     <li>Under 25 MB install size on low-end phones</li>
@@ -152,43 +152,43 @@ export const TechStackGuideModal: React.FC<TechStackGuideModalProps> = ({ onClos
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr className="border-b border-slate-700 text-slate-400 bg-slate-950/60">
+                    <tr className="border-b border-blue-400/30 text-blue-200 bg-[#081d47]">
                       <th className="p-2.5">Feature</th>
-                      <th className="p-2.5 text-blue-400">Unity (URP)</th>
-                      <th className="p-2.5 text-teal-400">Godot 4.3</th>
-                      <th className="p-2.5 text-purple-400">HTML5 Canvas</th>
+                      <th className="p-2.5 text-sky-300 font-black">Unity (URP)</th>
+                      <th className="p-2.5 text-teal-300 font-black">Godot 4.3</th>
+                      <th className="p-2.5 text-purple-300 font-black">HTML5 Canvas</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800">
-                    <tr>
+                  <tbody className="divide-y divide-blue-400/20">
+                    <tr className="hover:bg-[#133785]/30">
                       <td className="p-2.5 font-bold text-white">Rendering / Graphics</td>
-                      <td className="p-2.5">URP Shader Graph (Voxel/Toon)</td>
-                      <td className="p-2.5">Vulkan Mobile / Custom Shaders</td>
-                      <td className="p-2.5">2D/WebGL Canvas 60 FPS</td>
+                      <td className="p-2.5 text-blue-100">URP Shader Graph (Voxel/Toon)</td>
+                      <td className="p-2.5 text-blue-100">Vulkan Mobile / Custom Shaders</td>
+                      <td className="p-2.5 text-blue-100">2D/WebGL Canvas 60 FPS</td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-[#133785]/30">
                       <td className="p-2.5 font-bold text-white">Mobile APK Size</td>
-                      <td className="p-2.5 text-amber-400">~45 MB - 75 MB</td>
-                      <td className="p-2.5 text-emerald-400">~15 MB - 25 MB</td>
-                      <td className="p-2.5 text-emerald-400">&lt; 1 MB (Instant web)</td>
+                      <td className="p-2.5 text-amber-300 font-bold">~45 MB - 75 MB</td>
+                      <td className="p-2.5 text-emerald-300 font-bold">~15 MB - 25 MB</td>
+                      <td className="p-2.5 text-emerald-300 font-bold">&lt; 1 MB (Instant web)</td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-[#133785]/30">
                       <td className="p-2.5 font-bold text-white">Monetization SDKs</td>
-                      <td className="p-2.5 text-emerald-400">Industry leader (all SDKs)</td>
-                      <td className="p-2.5 text-amber-400">Community plugins</td>
-                      <td className="p-2.5 text-blue-400">AdSense / Poki SDK</td>
+                      <td className="p-2.5 text-emerald-300 font-bold">Industry leader (all SDKs)</td>
+                      <td className="p-2.5 text-amber-300">Community plugins</td>
+                      <td className="p-2.5 text-sky-300">AdSense / Poki SDK</td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-[#133785]/30">
                       <td className="p-2.5 font-bold text-white">Grid Splat Technique</td>
-                      <td className="p-2.5">Dynamic RenderTexture / Blit</td>
-                      <td className="p-2.5">SubViewport / TileMapLayer</td>
-                      <td className="p-2.5">2D Array Bitmask + Path Splat</td>
+                      <td className="p-2.5 text-blue-100">Dynamic RenderTexture / Blit</td>
+                      <td className="p-2.5 text-blue-100">SubViewport / TileMapLayer</td>
+                      <td className="p-2.5 text-blue-100">2D Array Bitmask + Path Splat</td>
                     </tr>
-                    <tr>
+                    <tr className="hover:bg-[#133785]/30">
                       <td className="p-2.5 font-bold text-white">License & Cost</td>
-                      <td className="p-2.5 text-amber-400">Free tier + runtime fee rules</td>
-                      <td className="p-2.5 text-emerald-400">100% Free / MIT License</td>
-                      <td className="p-2.5 text-emerald-400">100% Open Source</td>
+                      <td className="p-2.5 text-amber-300">Free tier + runtime fee rules</td>
+                      <td className="p-2.5 text-emerald-300 font-bold">100% Free / MIT License</td>
+                      <td className="p-2.5 text-emerald-300 font-bold">100% Open Source</td>
                     </tr>
                   </tbody>
                 </table>
@@ -203,30 +203,30 @@ export const TechStackGuideModal: React.FC<TechStackGuideModalProps> = ({ onClos
               </h3>
 
               <div className="space-y-2.5 text-xs">
-                <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                <div className="bg-[#081d47] p-3 rounded-xl border border-blue-400/30 shadow">
                   <span className="font-black text-sky-400 block mb-1">1. Territory Voxel Grid Engine</span>
-                  <p className="text-slate-300">
-                    A discrete 2D grid buffer (e.g. 20×30 cells). Each cell stores an owner (<code className="text-sky-300">Blue</code>, <code className="text-rose-300">Red</code>, or <code className="text-slate-300">Neutral</code>). Territory percentage is calculated as <code className="text-emerald-400">blueTiles / totalTiles * 100</code> on every frame.
+                  <p className="text-blue-100">
+                    A discrete 2D grid buffer (e.g. 20×30 cells). Each cell stores an owner (<code className="text-sky-300">Blue</code>, <code className="text-rose-300">Red</code>, or <code className="text-blue-200">Neutral</code>). Territory percentage is calculated as <code className="text-emerald-400">blueTiles / totalTiles * 100</code> on every frame.
                   </p>
                 </div>
 
-                <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                <div className="bg-[#081d47] p-3 rounded-xl border border-blue-400/30 shadow">
                   <span className="font-black text-amber-400 block mb-1">2. Buzz Saw Continuous Raymarching</span>
-                  <p className="text-slate-300">
+                  <p className="text-blue-100">
                     The Buzz Saw travels with velocity vector <code className="text-amber-300">(vx, vy)</code>. In every physics step, it checks bounding box collisions with enemy turrets, and paints all grid tiles within radius <code className="text-amber-300">R = 2.2</code> to the player's color continuously.
                   </p>
                 </div>
 
-                <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                <div className="bg-[#081d47] p-3 rounded-xl border border-blue-400/30 shadow">
                   <span className="font-black text-rose-400 block mb-1">3. Bot Trainer Decision Tree (AI)</span>
-                  <p className="text-slate-300">
+                  <p className="text-blue-100">
                     The enemy AI evaluates: (a) Does player have a turret close to mid-line? (Deploy counter-turret or saw down that lane); (b) Is Red territory below 45%? (Deploy defensive Heavy Cannon); (c) Has enough energy? (Deploy paint mortar into deepest player cluster).
                   </p>
                 </div>
 
-                <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                <div className="bg-[#081d47] p-3 rounded-xl border border-blue-400/30 shadow">
                   <span className="font-black text-emerald-400 block mb-1">4. Ink Splat Particle & Juice Engine</span>
-                  <p className="text-slate-300">
+                  <p className="text-blue-100">
                     Procedural audio synthesis (synthesizing sine/triangle pitches with exponential decay) + radial particle splatter bursts + subtle camera screenshake provide tactile arcade satisfaction.
                   </p>
                 </div>
@@ -236,8 +236,8 @@ export const TechStackGuideModal: React.FC<TechStackGuideModalProps> = ({ onClos
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-slate-800 bg-slate-950/80 flex items-center justify-between">
-          <span className="text-xs text-slate-400">
+        <div className="p-4 border-t border-blue-400/30 bg-[#081d47] flex items-center justify-between">
+          <span className="text-xs text-blue-200">
             Playable demo built with TypeScript &amp; 60fps HTML5 Canvas Engine.
           </span>
           <button

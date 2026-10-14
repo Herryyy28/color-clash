@@ -2,12 +2,20 @@ import React from 'react';
 import { Timer } from 'lucide-react';
 import { LevelConfig } from '../types';
 
+import { renderAvatarSvg } from './AvatarSelectionModal';
+
 interface HeaderHUDProps {
   bluePercent: number;
   redPercent: number;
   timeRemaining: number;
   currentLevel: LevelConfig;
   playerTrophies: number;
+  playerName?: string;
+  playerAvatarId?: string;
+  playerCoins?: number;
+  playerGems?: number;
+  isVip?: boolean;
+  onOpenAvatarModal?: () => void;
   isMuted: boolean;
   onToggleMute: () => void;
   onOpenTechModal?: () => void;
@@ -19,8 +27,16 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
   redPercent,
   timeRemaining,
   currentLevel,
+  playerName = 'You',
+  playerAvatarId = 'kid_headphones',
+  playerCoins = 0,
+  playerGems = 0,
+  isVip = false,
+  onOpenAvatarModal,
   isMuted,
   onToggleMute,
+  onOpenTechModal,
+  onOpenUnityModal,
 }) => {
   const formatTime = (secs: number) => {
     const m = Math.floor(secs / 60);
@@ -29,80 +45,125 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
   };
 
   return (
-    <div className="w-full px-2 pt-1 pb-1 select-none z-30 flex flex-col items-center">
-      {/* Exact Top Row Layout matching screenshot */}
-      <div className="w-full flex items-center justify-between gap-1.5">
-        {/* Blue Player Profile (Left) */}
-        <div className="flex flex-col items-center">
-          <div className="relative w-12 h-12 rounded-xl bg-gradient-to-b from-[#1e88e5] to-[#1565c0] border-2 border-white shadow-md flex items-center justify-center overflow-hidden">
-            {/* Level Tag on top-left of avatar */}
-            <div className="absolute top-0.5 left-0.5 bg-[#0d47a1] text-white text-[9px] font-black px-1 rounded-sm leading-none border border-blue-300/40">
-              0
+    <div className="w-full px-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))] pt-[max(0.25rem,env(safe-area-inset-top))] pb-1 select-none z-30 flex flex-col items-center bg-gradient-to-b from-[#1448b8]/70 via-[#123e9a]/40 to-transparent">
+      {/* 1. Top Mini Status & Currency Bar matching Reference Video */}
+      <div className="w-full max-w-md flex items-center justify-between px-1 mb-1 text-[11px] font-black">
+        {/* Currencies Pill Group */}
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Coins */}
+          <div className="flex items-center gap-1 bg-gradient-to-r from-[#1a55c6] to-[#2267ea] border border-amber-300/70 px-2.5 py-0.5 rounded-full shadow-[0_2px_8px_rgba(245,158,11,0.25)]">
+            <span className="text-[11px] leading-none">🪙</span>
+            <span className="text-yellow-300 font-black tracking-wide text-[10px] sm:text-xs">
+              {playerCoins}
+            </span>
+          </div>
+
+          {/* Gems */}
+          <div className="flex items-center gap-1 bg-gradient-to-r from-[#1a55c6] to-[#2267ea] border border-emerald-300/70 px-2.5 py-0.5 rounded-full shadow-[0_2px_8px_rgba(16,185,129,0.25)]">
+            <span className="text-[11px] leading-none">💎</span>
+            <span className="text-emerald-300 font-black tracking-wide text-[10px] sm:text-xs">
+              {playerGems}
+            </span>
+          </div>
+
+          {/* VIP Badge if active */}
+          {isVip && (
+            <div className="flex items-center gap-0.5 bg-gradient-to-r from-amber-400 to-yellow-400 text-amber-950 px-2 py-0.5 rounded-full shadow font-black text-[9px] border border-white">
+              👑 VIP
             </div>
-            {/* Cyan-haired kid avatar with blue cap & headphones */}
-            <svg viewBox="0 0 64 64" className="w-10 h-10 drop-shadow">
-              {/* Headphones */}
-              <path d="M12 28 C12 12, 52 12, 52 28" fill="none" stroke="#374151" strokeWidth="4" />
-              <rect x="8" y="24" width="8" height="14" rx="3" fill="#0284c7" />
-              <rect x="48" y="24" width="8" height="14" rx="3" fill="#0284c7" />
-              {/* Face */}
-              <circle cx="32" cy="32" r="16" fill="#fed7aa" />
-              {/* Cyan hair */}
-              <path d="M18 26 C20 18, 44 18, 46 26 C44 22, 38 20, 32 21 C26 20, 20 22, 18 26 Z" fill="#06b6d4" />
-              {/* Blue backwards cap */}
-              <ellipse cx="32" cy="22" rx="14" ry="7" fill="#2563eb" />
-              <path d="M30 15 L44 14" stroke="#1d4ed8" strokeWidth="3" strokeLinecap="round" />
-              {/* Eyes & Smile */}
-              <circle cx="26" cy="32" r="2" fill="#1e293b" />
-              <circle cx="38" cy="32" r="2" fill="#1e293b" />
-              <path d="M28 38 Q32 41 36 38" fill="none" stroke="#ea580c" strokeWidth="2" strokeLinecap="round" />
-            </svg>
+          )}
+        </div>
+
+        {/* Action Controls: Sound mute toggle & Info */}
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={onToggleMute}
+            className="w-6 h-6 rounded-full bg-gradient-to-b from-[#256cf0] to-[#1c55c5] border border-white/70 hover:from-[#2e74f8] hover:to-[#2262dc] flex items-center justify-center text-[11px] text-white active:scale-90 transition cursor-pointer shadow-md"
+            title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
+          >
+            {isMuted ? '🔇' : '🔊'}
+          </button>
+          {onOpenUnityModal && (
+            <button
+              onClick={onOpenUnityModal}
+              className="px-2 py-0.5 rounded-lg bg-gradient-to-b from-[#256cf0] to-[#1c55c5] border border-sky-300/70 text-[9px] font-black text-white hover:from-[#2e74f8] hover:to-[#2262dc] cursor-pointer active:scale-95 transition shadow-md"
+              title="Unity Spec & Guide"
+            >
+              Unity 6
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* 2. Main Battle Header: Left Player, Center Score Bars & Timer, Right Opponent */}
+      <div className="w-full max-w-md flex items-center justify-between gap-1.5 sm:gap-2 px-0.5">
+        {/* Blue Player Profile (Left) - Clickable to open Avatar Selection */}
+        <div
+          onClick={onOpenAvatarModal}
+          className="flex flex-col items-center cursor-pointer group active:scale-95 transition shrink-0"
+          title="Tap to change avatar or edit name"
+        >
+          <div className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-b from-[#38bdf8] to-[#1d4ed8] border-2 border-white group-hover:border-yellow-300 shadow-md flex items-center justify-center overflow-hidden p-0.5">
+            {/* Level Tag on top-left of avatar */}
+            <div className="absolute top-0.5 left-0.5 bg-[#0284c7] text-white text-[8px] sm:text-[9px] font-black px-1 rounded-sm leading-none border border-white/80 z-10 shadow">
+              {currentLevel.level}
+            </div>
+            {/* Dynamic Player Avatar */}
+            {renderAvatarSvg(playerAvatarId, 'w-9 h-9 sm:w-10 sm:h-10 drop-shadow')}
           </div>
           {/* Blue Name Banner */}
-          <div className="bg-[#1976d2] text-white font-black text-[10px] px-3 py-0.5 rounded-full -mt-1.5 shadow border border-blue-300">
-            You
+          <div className="bg-gradient-to-r from-[#0284c7] to-[#2563eb] text-white font-black text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full -mt-1.5 shadow border border-white truncate max-w-[68px] sm:max-w-[76px] text-center">
+            {playerName}
           </div>
         </div>
 
-        {/* Center: Dual Progress Bar, Percentage & Timer */}
-        <div className="flex-1 flex flex-col items-center justify-center max-w-[210px]">
-          {/* Territory % Tag centered above bar (e.g. 50% in bright blue) */}
-          <div className="bg-white/95 text-[#0284c7] font-black text-xs px-3 py-0.5 rounded-full shadow-md border border-slate-900 -mb-1.5 z-20">
-            {bluePercent}%
+        {/* Center: Dual Score Indicators, Territory Progress Bar & Countdown Timer (Responsive Proportional Flexbox) */}
+        <div className="flex-1 min-w-0 flex flex-col items-center justify-center px-1">
+          {/* Territory % Tags: Proportional Flex Row */}
+          <div className="w-full flex items-center justify-between px-1 mb-0.5 z-20">
+            <span className="bg-gradient-to-r from-[#0284c7] to-[#38bdf8] text-white font-black text-[10px] sm:text-xs px-2.5 py-0.5 rounded-full shadow-md border-2 border-white leading-none shrink-0">
+              {bluePercent}%
+            </span>
+            <span className="text-[10px] sm:text-[11px] font-black text-sky-100 tracking-wider uppercase opacity-95 drop-shadow truncate px-1">
+              Territory
+            </span>
+            <span className="bg-gradient-to-r from-[#f43f5e] to-[#e11d48] text-white font-black text-[10px] sm:text-xs px-2.5 py-0.5 rounded-full shadow-md border-2 border-white leading-none shrink-0">
+              {redPercent}%
+            </span>
           </div>
 
-          {/* Split Color Territory Bar */}
-          <div className="w-full h-4 bg-[#0a0f1d] rounded-full p-0.5 border border-white/60 shadow-inner flex overflow-hidden relative">
+          {/* Split Color Territory Bar - Responsive fluid flexbox with light blue gradient container */}
+          <div className="w-full h-3.5 sm:h-4 bg-gradient-to-r from-[#1746a8] via-[#1d57c7] to-[#1746a8] rounded-full p-0.5 border-2 border-white shadow-[0_3px_12px_rgba(14,165,233,0.35)] flex overflow-hidden relative">
             <div
-              className="h-full bg-gradient-to-r from-[#0284c7] to-[#38bdf8] transition-all duration-300 rounded-l-full"
+              className="h-full bg-gradient-to-r from-[#0ea5e9] via-[#38bdf8] to-[#60a5fa] transition-all duration-300 rounded-l-full shadow-[inset_0_1px_2px_rgba(255,255,255,0.6)]"
               style={{ width: `${bluePercent}%` }}
             />
             {/* Clean white separator line */}
-            <div className="w-0.5 h-full bg-white shadow-sm z-10" />
+            <div className="w-1 h-full bg-white shadow-[0_0_6px_rgba(255,255,255,0.9)] z-10 shrink-0 rounded-full" />
             <div
-              className="h-full bg-gradient-to-r from-[#f43f5e] to-[#e11d48] transition-all duration-300 rounded-r-full"
+              className="h-full bg-gradient-to-r from-[#fb7185] via-[#f43f5e] to-[#e11d48] transition-all duration-300 rounded-r-full shadow-[inset_0_1px_2px_rgba(255,255,255,0.6)]"
               style={{ width: `${redPercent}%` }}
             />
           </div>
 
-          {/* Countdown Clock with Stopwatch Icon */}
-          <div className="flex items-center gap-1 mt-1 bg-[#0b1329]/90 border border-slate-700/80 px-2.5 py-0.5 rounded-full text-[11px] font-black text-white shadow">
-            <Timer className="w-3 h-3 text-sky-400" />
-            <span className={timeRemaining < 30 ? 'text-rose-400 animate-pulse' : ''}>
+          {/* Countdown Clock with Light Blue Gradient Container */}
+          <div className="flex items-center gap-1.5 mt-1 bg-gradient-to-r from-[#1a55c6] via-[#2267ea] to-[#1a55c6] border border-sky-300/70 px-3 py-0.5 rounded-full text-[10px] sm:text-[11px] font-black text-white shadow-md">
+            <Timer className="w-3 h-3 text-sky-300 shrink-0" />
+            <span className={timeRemaining < 30 ? 'text-amber-300 animate-pulse font-extrabold' : 'text-white'}>
               {formatTime(timeRemaining)}
             </span>
           </div>
         </div>
 
         {/* Red Opponent Profile (Right) */}
-        <div className="flex flex-col items-center">
-          <div className="relative w-12 h-12 rounded-xl bg-gradient-to-b from-[#e53935] to-[#c62828] border-2 border-white shadow-md flex items-center justify-center overflow-hidden">
+        <div className="flex flex-col items-center shrink-0">
+          <div className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-b from-[#f87171] to-[#dc2626] border-2 border-white shadow-md flex items-center justify-center overflow-hidden p-0.5">
             {/* Level Tag on top-right of avatar */}
-            <div className="absolute top-0.5 right-0.5 bg-[#b71c1c] text-white text-[9px] font-black px-1 rounded-sm leading-none border border-red-300/40">
-              5
+            <div className="absolute top-0.5 right-0.5 bg-[#b91c1c] text-white text-[8px] sm:text-[9px] font-black px-1 rounded-sm leading-none border border-white/80 z-10 shadow">
+              {Math.max(1, currentLevel.level + 1)}
             </div>
             {/* Zombie / Red Trainer Monster avatar */}
-            <svg viewBox="0 0 64 64" className="w-10 h-10 drop-shadow">
+            <svg viewBox="0 0 64 64" className="w-9 h-9 sm:w-10 sm:h-10 drop-shadow">
               {/* Red Spiked Helmet */}
               <path d="M16 26 C16 14, 48 14, 48 26 L52 30 L12 30 Z" fill="#991b1b" />
               <path d="M32 10 L30 18 L34 18 Z" fill="#facc15" />
@@ -117,8 +178,8 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
             </svg>
           </div>
           {/* Red Name Banner */}
-          <div className="bg-[#d32f2f] text-white font-black text-[10px] px-2.5 py-0.5 rounded-full -mt-1.5 shadow border border-red-300 truncate max-w-[70px]">
-            Trainer
+          <div className="bg-gradient-to-r from-[#e11d48] to-[#b91c1c] text-white font-black text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full -mt-1.5 shadow border border-white truncate max-w-[68px] sm:max-w-[76px] text-center">
+            {currentLevel.opponentName || 'Trainer'}
           </div>
         </div>
       </div>

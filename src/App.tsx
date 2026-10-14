@@ -12,6 +12,9 @@ import { CardCollectionView } from './components/CardCollectionView';
 import { DailySpinView } from './components/DailySpinView';
 import { ShopView } from './components/ShopView';
 import { SettingsView } from './components/SettingsView';
+import { NoAdsVipModal } from './components/NoAdsVipModal';
+import { VersusIntroModal } from './components/VersusIntroModal';
+import { AvatarSelectionModal } from './components/AvatarSelectionModal';
 import {
   Team,
   Card,
@@ -43,11 +46,16 @@ export default function App() {
   // Modals
   const [showTechModal, setShowTechModal] = useState(false);
   const [showUnityModal, setShowUnityModal] = useState(false);
+  const [showNoAdsModal, setShowNoAdsModal] = useState(false);
+  const [showAvatarModal, setShowAvatarModal] = useState(false);
+  const [showVersusModal, setShowVersusModal] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
 
   // Player Progression Profile
   const [playerProfile, setPlayerProfile] = useState<PlayerProfile>({
     name: 'Commander',
+    avatarId: 'kid_headphones',
+    isVip: false,
     level: 3,
     exp: 280,
     maxExp: 500,
@@ -1009,10 +1017,10 @@ export default function App() {
     <div
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
-      className="relative w-screen h-screen bg-[#070b14] text-white flex justify-center items-center overflow-hidden select-none touch-none"
+      className="relative w-screen h-screen bg-gradient-to-br from-[#0c2357] via-[#091b42] to-[#071536] text-white flex justify-center items-center overflow-hidden select-none touch-none"
     >
       {/* Mobile Portrait Shell */}
-      <div className="w-full h-full max-w-full sm:max-w-[440px] flex flex-col items-center justify-between relative bg-[#090e1a] sm:shadow-[0_0_60px_rgba(0,0,0,0.9)] sm:border-x sm:border-slate-800/60 overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+      <div className="w-full h-full max-w-full sm:max-w-[440px] flex flex-col items-center justify-between relative bg-gradient-to-b from-[#1343a8] via-[#0e358c] to-[#0a296d] sm:shadow-[0_0_50px_rgba(20,90,220,0.4)] sm:border-x-2 sm:border-blue-400/50 overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
         {/* ======================================================== */}
         {/* 1. START / SPLASH SCREEN (Frames 16.6s & 23.7s from Video) */}
         {/* ======================================================== */}
@@ -1025,7 +1033,7 @@ export default function App() {
             }}
             className="absolute inset-0 z-50 flex flex-col items-center justify-between p-6 cursor-pointer overflow-hidden select-none"
             style={{
-              background: 'radial-gradient(circle at 50% 30%, #4338ca 0%, #1e1b4b 30%, #581c87 60%, #b91c1c 85%, #d97706 100%)',
+              background: 'radial-gradient(circle at 50% 30%, #3b82f6 0%, #1d4ed8 35%, #1e3a8a 65%, #0f2766 100%)',
             }}
           >
             {/* Background grid */}
@@ -1033,7 +1041,7 @@ export default function App() {
 
             {/* Top Bar with Trophy count */}
             <div className="w-full flex justify-between items-center z-10">
-              <span className="text-xs font-black text-white/90 bg-black/40 backdrop-blur px-3 py-1 rounded-full border border-white/20 flex items-center gap-1.5">
+              <span className="text-xs font-black text-white/90 bg-blue-900/60 backdrop-blur px-3 py-1 rounded-full border border-blue-300/40 flex items-center gap-1.5 shadow">
                 <Trophy className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
                 Trophies: {playerProfile.trophies}
               </span>
@@ -1041,7 +1049,7 @@ export default function App() {
 
             {/* Central 3D "COLOR CLASH" Logo Image */}
             <div className="flex flex-col items-center my-auto z-10 animate-in zoom-in-95 duration-700">
-              <div className="relative w-60 h-60 flex items-center justify-center filter drop-shadow-[0_20px_40px_rgba(0,0,0,0.9)] animate-float">
+              <div className="relative w-60 h-60 flex items-center justify-center filter drop-shadow-[0_15px_30px_rgba(15,35,90,0.6)] animate-float">
                 <img
                   src="/logo.png"
                   alt="Color Clash"
@@ -1051,7 +1059,7 @@ export default function App() {
 
               {/* Pulsing "TAP TO BATTLE" Prompt */}
               <div className="mt-4 flex flex-col items-center gap-2">
-                <div className="px-8 py-3.5 rounded-full bg-gradient-to-r from-emerald-400 via-sky-400 to-blue-500 text-slate-950 font-black text-lg tracking-wider shadow-[0_10px_30px_rgba(56,189,248,0.7)] border-2 border-white animate-pulse flex items-center gap-2">
+                <div className="px-8 py-3.5 rounded-full bg-gradient-to-r from-emerald-400 via-sky-400 to-blue-500 text-blue-950 font-black text-lg tracking-wider shadow-[0_10px_30px_rgba(56,189,248,0.7)] border-2 border-white animate-pulse flex items-center gap-2">
                   <Play className="w-5 h-5 fill-current" />
                   TAP TO BATTLE
                 </div>
@@ -1105,12 +1113,14 @@ export default function App() {
                   chestSlots={chestSlots}
                   onOpenChest={handleOpenChest}
                   onStartUnlockChest={handleStartUnlockChest}
-                  onStartBattle={() => startLevel(currentLevelIndex)}
+                  onStartBattle={() => setShowVersusModal(true)}
                   onOpenDeckTab={() => setCurrentTab('cards')}
                   onOpenShopTab={() => setCurrentTab('shop')}
                   onOpenSpinTab={() => setCurrentTab('spin')}
                   onOpenUnityModal={() => setShowUnityModal(true)}
                   onOpenTechModal={() => setShowTechModal(true)}
+                  onOpenAvatarModal={() => setShowAvatarModal(true)}
+                  onOpenNoAdsModal={() => setShowNoAdsModal(true)}
                 />
               )}
 
@@ -1204,6 +1214,12 @@ export default function App() {
               timeRemaining={timeRemaining}
               currentLevel={currentLevel}
               playerTrophies={playerProfile.trophies}
+              playerName={playerProfile.name}
+              playerAvatarId={playerProfile.avatarId || 'kid_headphones'}
+              playerCoins={playerProfile.coins}
+              playerGems={playerProfile.gems}
+              isVip={playerProfile.isVip}
+              onOpenAvatarModal={() => setShowAvatarModal(true)}
               isMuted={isMuted}
               onToggleMute={() => {
                 const muted = sounds.toggleMute();
@@ -1272,13 +1288,13 @@ export default function App() {
         {/* 5. DEFEAT POPUP MODAL                                    */}
         {/* ======================================================== */}
         {gameState === 'defeat' && (
-          <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
-            <div className="relative w-full max-w-sm bg-gradient-to-b from-slate-900 to-rose-950 rounded-3xl p-6 border-2 border-rose-500 shadow-2xl flex flex-col items-center text-center animate-in zoom-in-90">
+          <div className="fixed inset-0 z-50 bg-[#071940]/85 backdrop-blur-md flex items-center justify-center p-4">
+            <div className="relative w-full max-w-sm bg-gradient-to-b from-[#183478] to-[#601222] rounded-3xl p-6 border-2 border-rose-400 shadow-[0_0_50px_rgba(244,63,94,0.35)] flex flex-col items-center text-center animate-in zoom-in-90">
               <div className="w-16 h-16 rounded-2xl bg-rose-600 flex items-center justify-center text-3xl shadow-xl border-2 border-white mb-2">
                 💥
               </div>
-              <h1 className="text-3xl font-black text-rose-400 mt-2">DEFEAT</h1>
-              <p className="text-xs text-slate-300 mt-1">
+              <h1 className="text-3xl font-black text-rose-300 mt-2">DEFEAT</h1>
+              <p className="text-xs text-blue-100 mt-1">
                 Red claimed {redPercent}% territory. Don't give up!
               </p>
               <div className="flex gap-2 w-full mt-5">
@@ -1287,7 +1303,7 @@ export default function App() {
                     setGameState('menu');
                     setCurrentTab('battle');
                   }}
-                  className="flex-1 py-3 px-4 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm border border-slate-700 cursor-pointer active:scale-95 transition flex items-center justify-center gap-1"
+                  className="flex-1 py-3 px-4 rounded-2xl bg-blue-900/70 hover:bg-blue-800 text-white font-bold text-sm border border-blue-400/40 cursor-pointer active:scale-95 transition flex items-center justify-center gap-1 shadow"
                 >
                   <Home className="w-4 h-4" />
                   Home
@@ -1318,6 +1334,72 @@ export default function App() {
       {showUnityModal && (
         <UnityRoadmapModal onClose={() => setShowUnityModal(false)} />
       )}
+
+      {/* ======================================================== */}
+      {/* 8. NO ADS VIP POPUP MODAL (Video 0-2s)                   */}
+      {/* ======================================================== */}
+      <NoAdsVipModal
+        isOpen={showNoAdsModal}
+        onClose={() => setShowNoAdsModal(false)}
+        isVipActive={!!playerProfile.isVip}
+        onActivateVip={() => {
+          setPlayerProfile((p) => ({
+            ...p,
+            isVip: true,
+            gems: p.gems + 200,
+            coins: p.coins + 1500,
+          }));
+        }}
+      />
+
+      {/* ======================================================== */}
+      {/* 9. VERSUS INTRO MATCH SEQUENCE (Video 3-7s)              */}
+      {/* ======================================================== */}
+      <VersusIntroModal
+        isOpen={showVersusModal}
+        playerName={playerProfile.name}
+        playerAvatarId={playerProfile.avatarId || 'kid_headphones'}
+        playerTrophies={playerProfile.trophies}
+        currentLevel={currentLevel}
+        onFightStart={() => {
+          setShowVersusModal(false);
+          startLevel(currentLevelIndex);
+        }}
+      />
+
+      {/* ======================================================== */}
+      {/* 10. AVATAR & NAME CUSTOMIZATION OVERLAY (Video 15-18s, 31-36s) */}
+      {/* ======================================================== */}
+      <AvatarSelectionModal
+        isOpen={showAvatarModal}
+        onClose={() => setShowAvatarModal(false)}
+        currentAvatarId={playerProfile.avatarId || 'kid_headphones'}
+        onSelectAvatar={(avatarId) => {
+          setPlayerProfile((p) => ({ ...p, avatarId }));
+        }}
+        playerName={playerProfile.name}
+        onUpdatePlayerName={(newName) => {
+          setPlayerProfile((p) => ({ ...p, name: newName }));
+        }}
+        playerGems={playerProfile.gems}
+        playerCoins={playerProfile.coins}
+        isVip={!!playerProfile.isVip}
+        isLiveInBattle={gameState === 'playing'}
+        onDeductGems={(amount) => {
+          if (playerProfile.gems >= amount) {
+            setPlayerProfile((p) => ({ ...p, gems: p.gems - amount }));
+            return true;
+          }
+          return false;
+        }}
+        onDeductCoins={(amount) => {
+          if (playerProfile.coins >= amount) {
+            setPlayerProfile((p) => ({ ...p, coins: p.coins - amount }));
+            return true;
+          }
+          return false;
+        }}
+      />
     </div>
   );
 }
