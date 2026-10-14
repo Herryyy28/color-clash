@@ -10,6 +10,7 @@ interface CardCollectionViewProps {
   playerCoins: number;
   onUpgradeCard: (cardId: CardType) => void;
   onEquipCard: (cardId: CardType, slotIndex: number) => void;
+  onCoinShortfall?: (itemTitle: string, requiredCoins: number, currentCoins: number) => void;
 }
 
 export const CardCollectionView: React.FC<CardCollectionViewProps> = ({
@@ -18,6 +19,7 @@ export const CardCollectionView: React.FC<CardCollectionViewProps> = ({
   playerCoins,
   onUpgradeCard,
   onEquipCard,
+  onCoinShortfall,
 }) => {
   const [selectedCardId, setSelectedCardId] = useState<CardType | null>(null);
   const [equippingCardId, setEquippingCardId] = useState<CardType | null>(null);
@@ -319,12 +321,23 @@ export const CardCollectionView: React.FC<CardCollectionViewProps> = ({
 
               {selectedInventory.cards >= selectedInventory.cardsRequired && (
                 <button
-                  disabled={playerCoins < selectedInventory.upgradeCost}
                   onClick={() => {
+                    if (playerCoins < selectedInventory.upgradeCost) {
+                      onCoinShortfall?.(
+                        `${selectedCard.name} (Lvl ${selectedInventory.level + 1})`,
+                        selectedInventory.upgradeCost,
+                        playerCoins
+                      );
+                      return;
+                    }
                     sounds.playCardUpgrade();
                     onUpgradeCard(selectedCard.id);
                   }}
-                  className="flex-1 py-3 px-3 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-500 hover:from-emerald-300 text-teal-950 font-black text-xs uppercase tracking-wider disabled:opacity-50 cursor-pointer active:scale-95 transition flex items-center justify-center gap-1 border border-white shadow"
+                  className={`flex-1 py-3 px-3 rounded-xl font-black text-xs uppercase tracking-wider cursor-pointer active:scale-95 transition flex items-center justify-center gap-1 border border-white shadow ${
+                    playerCoins < selectedInventory.upgradeCost
+                      ? 'bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 text-yellow-200'
+                      : 'bg-gradient-to-r from-emerald-400 to-teal-500 hover:from-emerald-300 text-teal-950'
+                  }`}
                 >
                   <ArrowUp className="w-3.5 h-3.5 stroke-[3]" />
                   Upgrade ({selectedInventory.upgradeCost} 🪙)

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Timer } from 'lucide-react';
+import { Timer, Pause } from 'lucide-react';
 import { LevelConfig } from '../types';
 import { renderAvatarSvg } from './AvatarSelectionModal';
 
@@ -15,8 +15,12 @@ interface HeaderHUDProps {
   playerGems?: number;
   isVip?: boolean;
   onOpenAvatarModal?: () => void;
+  onOpenLedger?: () => void;
+  onOpenRewardedAd?: () => void;
   isMuted: boolean;
   onToggleMute: () => void;
+  onPause: () => void;
+  isPaused?: boolean;
 }
 
 export const HeaderHUD: React.FC<HeaderHUDProps> = ({
@@ -30,9 +34,29 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
   playerGems = 0,
   isVip = false,
   onOpenAvatarModal,
+  onOpenLedger,
+  onOpenRewardedAd,
   isMuted,
   onToggleMute,
+  onPause,
+  isPaused = false,
 }) => {
+  // Smooth animated counter for coins
+  const [displayedCoins, setDisplayedCoins] = React.useState(playerCoins);
+
+  React.useEffect(() => {
+    if (displayedCoins === playerCoins) return;
+    const diff = playerCoins - displayedCoins;
+    const step = Math.sign(diff) * Math.max(1, Math.ceil(Math.abs(diff) / 10));
+    const timer = setTimeout(() => {
+      setDisplayedCoins((prev) => {
+        if (Math.abs(playerCoins - prev) <= Math.abs(step)) return playerCoins;
+        return prev + step;
+      });
+    }, 30);
+    return () => clearTimeout(timer);
+  }, [playerCoins, displayedCoins]);
+
   const formatTime = (secs: number) => {
     const m = Math.floor(secs / 60);
     const s = secs % 60;
@@ -45,21 +69,29 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
       <div className="w-full max-w-md flex items-center justify-between px-1 mb-1 text-[11px] font-black">
         {/* Currencies Pill Group */}
         <div className="flex items-center gap-1.5 sm:gap-2">
-          {/* Coins */}
-          <div className="flex items-center gap-1 bg-gradient-to-r from-[#1a55c6] to-[#2267ea] border border-amber-300/70 px-2.5 py-0.5 rounded-full shadow-[0_2px_8px_rgba(245,158,11,0.25)]">
+          {/* Animated Coins Pill - Clickable to open Ledger */}
+          <button
+            onClick={onOpenLedger}
+            title="Tap to view wallet audit ledger and transactions"
+            className="flex items-center gap-1 bg-gradient-to-r from-[#1a55c6] to-[#2267ea] border border-amber-300/70 hover:border-yellow-300 px-2.5 py-0.5 rounded-full shadow-[0_2px_8px_rgba(245,158,11,0.25)] cursor-pointer active:scale-95 transition"
+          >
             <span className="text-[11px] leading-none">🪙</span>
             <span className="text-yellow-300 font-black tracking-wide text-[10px] sm:text-xs">
-              {playerCoins}
+              {displayedCoins}
             </span>
-          </div>
+          </button>
 
           {/* Gems */}
-          <div className="flex items-center gap-1 bg-gradient-to-r from-[#1a55c6] to-[#2267ea] border border-emerald-300/70 px-2.5 py-0.5 rounded-full shadow-[0_2px_8px_rgba(16,185,129,0.25)]">
+          <button
+            onClick={onOpenLedger}
+            title="Tap to view wallet ledger"
+            className="flex items-center gap-1 bg-gradient-to-r from-[#1a55c6] to-[#2267ea] border border-emerald-300/70 hover:border-emerald-200 px-2.5 py-0.5 rounded-full shadow-[0_2px_8px_rgba(16,185,129,0.25)] cursor-pointer active:scale-95 transition"
+          >
             <span className="text-[11px] leading-none">💎</span>
             <span className="text-emerald-300 font-black tracking-wide text-[10px] sm:text-xs">
               {playerGems}
             </span>
-          </div>
+          </button>
 
           {/* VIP Badge if active */}
           {isVip && (
@@ -69,7 +101,7 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
           )}
         </div>
 
-        {/* Action Controls: Sound mute toggle */}
+        {/* Action Controls: Sound mute toggle & Pause button */}
         <div className="flex items-center gap-1.5">
           <button
             onClick={onToggleMute}
@@ -77,6 +109,19 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
             title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
           >
             {isMuted ? '🔇' : '🔊'}
+          </button>
+
+          {/* Pause Button */}
+          <button
+            onClick={onPause}
+            className={`w-6 h-6 rounded-full border border-white/80 hover:border-yellow-300 flex items-center justify-center text-white active:scale-90 transition cursor-pointer shadow-md ${
+              isPaused
+                ? 'bg-gradient-to-b from-amber-400 to-yellow-500 text-amber-950 ring-2 ring-yellow-300'
+                : 'bg-gradient-to-b from-[#256cf0] to-[#1c55c5] hover:from-[#387bf8] hover:to-[#2262dc]'
+            }`}
+            title="Pause Match"
+          >
+            <Pause className="w-3 h-3 fill-current drop-shadow" />
           </button>
         </div>
       </div>

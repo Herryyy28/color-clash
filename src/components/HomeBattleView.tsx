@@ -22,6 +22,10 @@ interface HomeBattleViewProps {
   onOpenTechModal: () => void;
   onOpenAvatarModal: () => void;
   onOpenNoAdsModal: () => void;
+  onOpenRewardedAd: (placementId: string) => void;
+  onOpenDailyRewardModal: () => void;
+  onOpenLedgerModal: () => void;
+  onOpenEconomyModal: () => void;
 }
 
 export const HomeBattleView: React.FC<HomeBattleViewProps> = ({
@@ -42,6 +46,10 @@ export const HomeBattleView: React.FC<HomeBattleViewProps> = ({
   onOpenTechModal,
   onOpenAvatarModal,
   onOpenNoAdsModal,
+  onOpenRewardedAd,
+  onOpenDailyRewardModal,
+  onOpenLedgerModal,
+  onOpenEconomyModal,
 }) => {
   const avgEnergy = (
     activeDeck.reduce((acc, c) => acc + c.cost, 0) / (activeDeck.length || 1)
@@ -122,19 +130,20 @@ export const HomeBattleView: React.FC<HomeBattleViewProps> = ({
             </span>
           </div>
 
-          {/* Coins */}
+          {/* Coins - Clickable to open Wallet Ledger */}
           <button
             onClick={() => {
               sounds.playClick();
-              onOpenShopTab();
+              onOpenLedgerModal();
             }}
+            title="Tap to view wallet transaction ledger"
             className="flex items-center gap-1 bg-[#0c2a6b] border border-yellow-400/40 px-2 py-1 rounded-xl shadow-inner hover:border-yellow-300 cursor-pointer active:scale-95 transition"
           >
             <Coins className="w-3.5 h-3.5 text-yellow-400" />
             <span className="text-xs font-black text-yellow-300">
               {playerProfile.coins}
             </span>
-            <span className="text-[10px] text-yellow-300 font-black ml-0.5">+</span>
+            <span className="text-[10px] text-yellow-300 font-black ml-0.5">📜</span>
           </button>
 
           {/* Gems */}
@@ -154,8 +163,63 @@ export const HomeBattleView: React.FC<HomeBattleViewProps> = ({
         </div>
       </div>
 
+      {/* 1.5 REWARDED ADS & DAILY REWARD ACTION BAR */}
+      <div className="w-full mt-2.5 grid grid-cols-2 gap-2 shrink-0">
+        {/* Watch Ad - Collect Coins (Master Prompt Requirement 2) */}
+        <button
+          onClick={() => {
+            sounds.playClick();
+            onOpenRewardedAd('placement_home_reward');
+          }}
+          className="relative bg-gradient-to-r from-[#1746a8] via-[#1c55c6] to-[#256cf0] hover:from-[#1c55c6] hover:to-[#2e74f8] border-2 border-amber-300 rounded-2xl p-2.5 flex items-center justify-between shadow-[0_4px_16px_rgba(37,108,240,0.4)] cursor-pointer active:scale-95 transition group overflow-hidden"
+        >
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-amber-400 text-amber-950 flex items-center justify-center font-black text-lg shadow border border-white group-hover:scale-110 transition">
+              ▶
+            </div>
+            <div className="flex flex-col text-left leading-tight">
+              <span className="text-[9px] font-black uppercase tracking-wider text-amber-300 flex items-center gap-1">
+                Rewarded Ad <Sparkles className="w-2.5 h-2.5" />
+              </span>
+              <span className="text-[11px] font-black text-white drop-shadow">
+                Watch Ad
+              </span>
+            </div>
+          </div>
+          <div className="bg-[#092257] border border-yellow-400/60 px-2 py-0.5 rounded-full text-[10px] font-black text-yellow-300 shadow">
+            +100 🪙
+          </div>
+        </button>
+
+        {/* 7-Day Daily Rewards Calendar (Master Prompt Requirement 6) */}
+        <button
+          onClick={() => {
+            sounds.playClick();
+            onOpenDailyRewardModal();
+          }}
+          className="relative bg-gradient-to-r from-[#153e99] via-[#1b4cb8] to-[#1e58d4] hover:from-[#1b4cb8] hover:to-[#256cf0] border-2 border-sky-300/80 rounded-2xl p-2.5 flex items-center justify-between shadow-[0_4px_16px_rgba(27,76,184,0.35)] cursor-pointer active:scale-95 transition group"
+        >
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-sky-400 to-blue-500 text-white flex items-center justify-center text-base shadow border border-white group-hover:scale-110 transition">
+              🎁
+            </div>
+            <div className="flex flex-col text-left leading-tight">
+              <span className="text-[9px] font-black uppercase tracking-wider text-sky-200">
+                Daily Streak
+              </span>
+              <span className="text-[11px] font-black text-white drop-shadow">
+                7-Day Vault
+              </span>
+            </div>
+          </div>
+          <div className="bg-[#092257] border border-sky-300/60 px-2 py-0.5 rounded-full text-[10px] font-black text-sky-200 shadow">
+            Claim 🎁
+          </div>
+        </button>
+      </div>
+
       {/* 2. SECTOR / ARENA HERO BANNER */}
-      <div className="relative w-full rounded-2xl overflow-hidden mt-3 p-3.5 border-2 border-sky-300/50 shadow-[0_6px_25px_rgba(14,165,233,0.3)] bg-gradient-to-r from-[#1a4cb8] via-[#143d99] to-[#123687]">
+      <div className="relative w-full rounded-2xl overflow-hidden mt-2.5 p-3.5 border-2 border-sky-300/50 shadow-[0_6px_25px_rgba(14,165,233,0.3)] bg-gradient-to-r from-[#1a4cb8] via-[#143d99] to-[#123687]">
         <div className="absolute top-0 right-0 w-36 h-36 bg-sky-400/20 rounded-full blur-2xl pointer-events-none" />
         <div className="flex items-center justify-between">
           <div className="flex flex-col">
@@ -376,24 +440,42 @@ export const HomeBattleView: React.FC<HomeBattleViewProps> = ({
       </div>
 
       {/* 6. DEV & ARCHITECTURE SHORTCUTS */}
-      <div className="w-full flex items-center justify-center gap-3 pt-1 border-t border-blue-400/30 text-blue-200 shrink-0">
+      <div className="w-full flex flex-wrap items-center justify-center gap-2 pt-1.5 border-t border-blue-400/30 text-blue-200 shrink-0">
+        <button
+          onClick={() => {
+            sounds.playClick();
+            onOpenEconomyModal();
+          }}
+          className="text-[10px] font-black text-amber-300 hover:text-white flex items-center gap-1 bg-[#092257] px-2 py-1 rounded-lg border border-amber-300/40 cursor-pointer active:scale-95 shadow"
+        >
+          ⚙️ Economy & C#
+        </button>
+        <button
+          onClick={() => {
+            sounds.playClick();
+            onOpenLedgerModal();
+          }}
+          className="text-[10px] font-black text-sky-200 hover:text-white flex items-center gap-1 bg-[#092257] px-2 py-1 rounded-lg border border-sky-300/40 cursor-pointer active:scale-95 shadow"
+        >
+          📜 Wallet Ledger
+        </button>
         <button
           onClick={() => {
             sounds.playClick();
             onOpenUnityModal();
           }}
-          className="text-[11px] font-black text-sky-200 hover:text-white flex items-center gap-1 bg-blue-900/60 px-2.5 py-1 rounded-lg border border-blue-300/40 cursor-pointer active:scale-95 shadow"
+          className="text-[10px] font-black text-sky-200 hover:text-white flex items-center gap-1 bg-[#092257] px-2 py-1 rounded-lg border border-blue-300/40 cursor-pointer active:scale-95 shadow"
         >
-          📱 Unity 3D Blueprint
+          📱 Unity 3D
         </button>
         <button
           onClick={() => {
             sounds.playClick();
             onOpenTechModal();
           }}
-          className="text-[11px] font-black text-emerald-200 hover:text-white flex items-center gap-1 bg-blue-900/60 px-2.5 py-1 rounded-lg border border-emerald-300/40 cursor-pointer active:scale-95 shadow"
+          className="text-[10px] font-black text-emerald-200 hover:text-white flex items-center gap-1 bg-[#092257] px-2 py-1 rounded-lg border border-emerald-300/40 cursor-pointer active:scale-95 shadow"
         >
-          <Cpu className="w-3 h-3 text-emerald-300" /> Engine Architecture
+          <Cpu className="w-3 h-3 text-emerald-300" /> Arch
         </button>
       </div>
     </div>

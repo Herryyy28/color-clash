@@ -402,6 +402,16 @@ class SoundEngine {
       osc.stop(startTime + 0.65);
     });
   }
+
+  // Saw blade continuous whirr or alias
+  public playSawBlade() {
+    this.playSawLaunch();
+  }
+
+  // Clash start gong / impact
+  public playFightStart() {
+    this.playBattleHorns();
+  }
 }
 
 export const sounds = new SoundEngine();

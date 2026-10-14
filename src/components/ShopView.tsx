@@ -10,6 +10,8 @@ interface ShopViewProps {
   onAddGems: (amount: number) => void;
   onDeductGems: (amount: number) => boolean;
   onOpenChestLoot: (tier: 'silver' | 'gold' | 'magical') => void;
+  onOpenRewardedAd?: (placementId: string) => void;
+  onOpenLedgerModal?: () => void;
 }
 
 export const ShopView: React.FC<ShopViewProps> = ({
@@ -19,6 +21,8 @@ export const ShopView: React.FC<ShopViewProps> = ({
   onAddGems,
   onDeductGems,
   onOpenChestLoot,
+  onOpenRewardedAd,
+  onOpenLedgerModal,
 }) => {
   const [hasClaimedDaily, setHasClaimedDaily] = useState(false);
   const [purchaseNotification, setPurchaseNotification] = useState<string | null>(null);
@@ -113,6 +117,34 @@ export const ShopView: React.FC<ShopViewProps> = ({
           {hasClaimedDaily ? 'CLAIMED' : 'CLAIM'}
         </button>
       </div>
+
+      {/* 1.5 SPONSORED REWARDED AD COIN VAULT (Master Prompt Requirement 2 & 7) */}
+      {onOpenRewardedAd && (
+        <div className="mt-2.5 bg-gradient-to-r from-[#1945a4] via-[#1f56c8] to-[#143d99] border-2 border-amber-300 rounded-2xl p-3 shadow-lg flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl bg-amber-400 text-amber-950 flex items-center justify-center text-xl font-black shadow border border-white">
+              ▶
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] font-black uppercase text-amber-300 tracking-wider flex items-center gap-1">
+                Rewarded Ad Vault <Sparkles className="w-2.5 h-2.5" />
+              </span>
+              <span className="text-sm font-black text-white drop-shadow">Free 100 Gold Coins</span>
+              <span className="text-[10px] text-sky-200 font-medium">Watch quick sponsor clip</span>
+            </div>
+          </div>
+
+          <button
+            onClick={() => {
+              sounds.playClick();
+              onOpenRewardedAd('placement_shop_free');
+            }}
+            className="py-2 px-3.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-400 text-amber-950 font-black text-xs uppercase tracking-wider shadow cursor-pointer transition active:scale-95 border-2 border-white flex items-center gap-1"
+          >
+            <span>WATCH AD</span>
+          </button>
+        </div>
+      )}
 
       {/* 2. CARD CHESTS SECTION */}
       <div className="mt-4">

@@ -16,6 +16,17 @@ import { NoAdsVipModal } from './components/NoAdsVipModal';
 import { VersusIntroModal } from './components/VersusIntroModal';
 import { AvatarSelectionModal } from './components/AvatarSelectionModal';
 import { BattleLog } from './components/BattleLog';
+import { PauseModal } from './components/PauseModal';
+import { WeatherEffect } from './components/WeatherEffect';
+import { RewardedAdModal } from './components/RewardedAdModal';
+import { DailyRewardModal } from './components/DailyRewardModal';
+import { TransactionLedgerModal } from './components/TransactionLedgerModal';
+import { EconomyConfigModal } from './components/EconomyConfigModal';
+import { ShortfallDialog } from './components/ShortfallDialog';
+import { CoinRewardAnimation } from './components/CoinRewardAnimation';
+import { currencyService, WalletState } from './services/currencyService';
+import { economyConfigService } from './services/economyConfig';
+import { adMediationService } from './services/adMediationService';
 import {
   Team,
   Card,
@@ -57,6 +68,51 @@ export default function App() {
   const [showVersusModal, setShowVersusModal] = useState(false);
   const [isMuted, setIsMuted] = useState(initialSave.isMuted);
 
+  // Economy & Rewarded Ad State (Authoritative CurrencyService)
+  const [walletState, setWalletState] = useState<WalletState>(() => currencyService.getWalletState());
+  const [showRewardedAdModal, setShowRewardedAdModal] = useState(false);
+  const [activeAdPlacement, setActiveAdPlacement] = useState<string>('placement_home_reward');
+  const [activeAdRewardCoins, setActiveAdRewardCoins] = useState<number | undefined>(undefined);
+  const [showDailyRewardModal, setShowDailyRewardModal] = useState(false);
+  const [showLedgerModal, setShowLedgerModal] = useState(false);
+  const [showEconomyModal, setShowEconomyModal] = useState(false);
+  const [shortfallData, setShortfallData] = useState<{
+    isOpen: boolean;
+    itemTitle: string;
+    requiredCoins: number;
+    currentCoins: number;
+  }>({
+    isOpen: false,
+    itemTitle: '',
+    requiredCoins: 0,
+    currentCoins: 0,
+  });
+  const [coinAnimation, setCoinAnimation] = useState<{
+    amount: number;
+    reason: string;
+  } | null>(null);
+
+  // Authoritative match reward result
+  const [matchRewardResult, setMatchRewardResult] = useState<{
+    rewardCoins: number;
+    rewardCubes: number;
+    timeBonus: number;
+    claimId: string;
+    hasDoubledReward: boolean;
+  } | null>(null);
+
+  // Reactive subscription: synchronize all screens to CurrencyService
+  useEffect(() => {
+    const unsubscribe = currencyService.subscribe((updated) => {
+      setWalletState(updated);
+      setPlayerProfile((prev) => {
+        if (prev.coins === updated.coins && prev.gems === updated.gems) return prev;
+        return { ...prev, coins: updated.coins, gems: updated.gems };
+      });
+    });
+    return unsubscribe;
+  }, []);
+
   // In-arena match countdown (3 -> 2 -> 1 -> CLASH!)
   const [battleCountdown, setBattleCountdown] = useState<number | null>(null);
 
@@ -78,7 +134,8 @@ export default function App() {
   // Daily spin state
   const [hasFreeSpin, setHasFreeSpin] = useState(initialSave.hasFreeSpin);
 
-  // Match stats
+  // Match stats & pause
+  const [isPaused, setIsPaused] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(180);
   const [bluePercent, setBluePercent] = useState(50);
   const [redPercent, setRedPercent] = useState(50);
@@ -221,13 +278,14 @@ export default function App() {
     setNextCard(remainingCards[0] || ALL_CARDS.roller);
 
     setGameState('playing');
+    setIsPaused(false);
     setBattleCountdown(3);
     sounds.playClick();
   }, [activeDeck]);
 
   // Battle countdown ticker (3 -> 2 -> 1 -> CLASH! -> start)
   useEffect(() => {
-    if (gameState !== 'playing' || battleCountdown === null) return;
+    if (gameState !== 'playing' || battleCountdown === null || isPaused) return;
 
     if (battleCountdown > 0) {
       const timer = setTimeout(() => {
@@ -242,7 +300,7 @@ export default function App() {
       }, 650);
       return () => clearTimeout(timer);
     }
-  }, [gameState, battleCountdown]);
+  }, [gameState, battleCountdown, isPaused]);
 
   // Auto-save player progression to localStorage
   useEffect(() => {
@@ -256,6 +314,95 @@ export default function App() {
       hasFreeSpin,
     });
   }, [playerProfile, inventory, activeDeck, chestSlots, currentLevelIndex, isMuted, hasFreeSpin]);
+
+  // Rewarded Ad & Animation Helpers
+  const handleLaunchAd = useCallback((placementId: string, customRewardCoins?: number) => {
+    setActiveAdPlacement(placementId);
+    setActiveAdRewardCoins(customRewardCoins);
+    setShowRewardedAdModal(true);
+  }, []);
+
+  const handleShowCoinAnimation = useCallback((amount: number, reason: string) => {
+    setCoinAnimation({ amount, reason });
+  }, []);
+
+  const handleAdRewardClaimed = useCallback((coinsEarned: number) => {
+    handleShowCoinAnimation(coinsEarned, 'Ad Reward Earned!');
+    if (activeAdPlacement === 'placement_battle_double') {
+      setMatchRewardResult((prev) =>
+        prev
+          ? {
+              ...prev,
+              rewardCoins: prev.rewardCoins + coinsEarned,
+              hasDoubledReward: true,
+            }
+          : null
+      );
+    }
+  }, [activeAdPlacement, handleShowCoinAnimation]);
+
+  // Authoritative Match Reward Resolver (Master Prompt Requirement 5)
+  const triggerMatchResult = useCallback((outcome: 'victory' | 'defeat') => {
+    if (gameState !== 'playing') return;
+
+    const config = economyConfigService.get();
+    const rules = config.battle;
+
+    if (outcome === 'victory') {
+      sounds.playVictory();
+      const base = rules.winBaseCoins + currentLevel.level * rules.winCoinsPerLevel;
+      const speedBonus = Math.min(rules.speedBonusMaxCoins, Math.round(timeRemaining * 0.15));
+      const cleanSweepBonus = bluePercent >= rules.cleanSweepTerritoryThreshold ? rules.cleanSweepBonusCoins : 0;
+      const totalCoins = base + speedBonus + cleanSweepBonus;
+
+      const claimId = currencyService.generateClaimId(`battle_win_lvl_${currentLevel.level}`);
+      currencyService.creditCoins(
+        totalCoins,
+        'reward_battle',
+        claimId,
+        `Sector ${currentLevel.level} Victory (+${speedBonus}s speed bonus)`,
+        'battle_victory',
+        { level: currentLevel.level, timeBonus: timeRemaining, cleanSweep: cleanSweepBonus > 0 }
+      );
+
+      setMatchRewardResult({
+        rewardCoins: totalCoins,
+        rewardCubes: currentLevel.rewardCubes + Math.floor(timeRemaining * 4),
+        timeBonus: timeRemaining,
+        claimId,
+        hasDoubledReward: false,
+      });
+
+      setGameState('victory');
+    } else {
+      sounds.playDefeat();
+      const defeatCoins = rules.defeatBaseCoins + currentLevel.level * rules.defeatCoinsPerLevel;
+      const claimId = currencyService.generateClaimId(`battle_defeat_lvl_${currentLevel.level}`);
+      currencyService.creditCoins(
+        defeatCoins,
+        'reward_battle',
+        claimId,
+        `Sector ${currentLevel.level} Participation Reward`,
+        'battle_defeat',
+        { level: currentLevel.level }
+      );
+
+      setMatchRewardResult({
+        rewardCoins: defeatCoins,
+        rewardCubes: Math.floor(currentLevel.rewardCubes * 0.3),
+        timeBonus: 0,
+        claimId,
+        hasDoubledReward: false,
+      });
+
+      setGameState('defeat');
+    }
+  }, [gameState, currentLevel, timeRemaining, bluePercent]);
+
+  const handleDoubleBattleRewardWithAd = useCallback(() => {
+    if (!matchRewardResult || matchRewardResult.hasDoubledReward) return;
+    handleLaunchAd('placement_battle_double', matchRewardResult.rewardCoins);
+  }, [matchRewardResult, handleLaunchAd]);
 
   // Recalculate territory percentage whenever grid updates
   const updateTerritoryPercentages = useCallback((currentGrid: Team[][]) => {
@@ -320,10 +467,10 @@ export default function App() {
     // Instant victory condition: 99% or 100% dominance
     if (bPercent >= 99 && gameState === 'playing') {
       setTimeout(() => {
-        setGameState('victory');
+        triggerMatchResult('victory');
       }, 500);
     }
-  }, [gameState, addBattleEvent]);
+  }, [gameState, addBattleEvent, triggerMatchResult]);
 
   // Splat/paint tiles in a radius
   const splatGrid = useCallback((centerX: number, centerY: number, radius: number, team: Team) => {
@@ -356,7 +503,7 @@ export default function App() {
 
   // Energy regeneration & match timer loop
   useEffect(() => {
-    if (gameState !== 'playing' || battleCountdown !== null) return;
+    if (gameState !== 'playing' || battleCountdown !== null || isPaused) return;
 
     // Smooth continuous energy regeneration (~0.6 energy/sec)
     const energyTimer = setInterval(() => {
@@ -370,10 +517,9 @@ export default function App() {
         if (prev <= 1) {
           // Match ends: determine victor based on territory percentage
           if (bluePercent > redPercent) {
-            setGameState('victory');
+            triggerMatchResult('victory');
           } else if (redPercent > bluePercent) {
-            sounds.playDefeat();
-            setGameState('defeat');
+            triggerMatchResult('defeat');
           } else {
             // Sudden Death tie: grant +30s overtime
             addBattleEvent({
@@ -395,11 +541,11 @@ export default function App() {
       clearInterval(energyTimer);
       clearInterval(secondTimer);
     };
-  }, [gameState, battleCountdown, bluePercent, redPercent, maxEnergy]);
+  }, [gameState, battleCountdown, isPaused, bluePercent, redPercent, maxEnergy]);
 
   // Enemy AI Logic Loop
   useEffect(() => {
-    if (gameState !== 'playing' || battleCountdown !== null) return;
+    if (gameState !== 'playing' || battleCountdown !== null || isPaused) return;
 
     const aiInterval = setInterval(() => {
       const now = Date.now();
@@ -483,11 +629,11 @@ export default function App() {
     }, 1200);
 
     return () => clearInterval(aiInterval);
-  }, [gameState, battleCountdown, currentLevel, addBattleEvent]);
+  }, [gameState, battleCountdown, isPaused, currentLevel, addBattleEvent]);
 
   // Main 60 FPS Combat, Recoil & Projectile Physics loop
   useEffect(() => {
-    if (gameState !== 'playing' || battleCountdown !== null) return;
+    if (gameState !== 'playing' || battleCountdown !== null || isPaused) return;
 
     let animId: number;
 
@@ -773,11 +919,11 @@ export default function App() {
 
     animId = requestAnimationFrame(gameTick);
     return () => cancelAnimationFrame(animId);
-  }, [gameState, splatGrid, addBattleEvent]);
+  }, [gameState, battleCountdown, isPaused, splatGrid, addBattleEvent]);
 
   // Card Deployment by Player
   const handleDeployCard = (card: Card, gx: number, gy: number) => {
-    if (energy < card.cost) return;
+    if (isPaused || energy < card.cost) return;
 
     // Check territorial placement validity
     const isSaw = card.id === 'saw';
@@ -935,10 +1081,15 @@ export default function App() {
       prev.map((slot) => {
         if (slot.id === slotId) {
           sounds.playRewardClaim();
+          const claimId = currencyService.generateClaimId(`chest_${slot.id}`);
+          currencyService.creditCoins(slot.coinsReward, 'reward_chest', claimId, `Opened ${slot.name}`);
+          if (slot.gemsReward > 0) {
+            currencyService.creditGems(slot.gemsReward, 'reward_chest', `${claimId}_gems`, `Opened ${slot.name} Gems`);
+          }
+          handleShowCoinAnimation(slot.coinsReward, `Opened ${slot.name}`);
+
           setPlayerProfile((p) => ({
             ...p,
-            coins: p.coins + slot.coinsReward,
-            gems: p.gems + slot.gemsReward,
             exp: p.exp + 40,
           }));
 
@@ -965,13 +1116,32 @@ export default function App() {
     );
   };
 
-  // Card Upgrade Handler
+  // Card Upgrade Handler (Master Prompt Requirement 7)
   const handleUpgradeCard = (cardId: CardType) => {
     const inv = inventory[cardId];
-    if (!inv || inv.cards < inv.cardsRequired || playerProfile.coins < inv.upgradeCost) return;
+    if (!inv || inv.cards < inv.cardsRequired) return;
 
-    // Deduct coins & upgrade inventory
-    const newCoins = playerProfile.coins - inv.upgradeCost;
+    const baseCard = ALL_CARDS[cardId];
+    const cardTitle = baseCard ? `${baseCard.name} (Lvl ${inv.level + 1})` : `Card ${cardId}`;
+
+    const spendResult = currencyService.spendCoins(
+      inv.upgradeCost,
+      'spend_card_upgrade',
+      `Upgraded ${cardTitle}`,
+      cardId
+    );
+
+    if (!spendResult.success) {
+      setShortfallData({
+        isOpen: true,
+        itemTitle: cardTitle,
+        requiredCoins: inv.upgradeCost,
+        currentCoins: currencyService.getCoins(),
+      });
+      return;
+    }
+
+    // Upgrade inventory
     const newLevel = inv.level + 1;
     const newCards = inv.cards - inv.cardsRequired;
     const newRequired = Math.round(inv.cardsRequired * 1.8);
@@ -989,7 +1159,6 @@ export default function App() {
     }));
 
     // Update ALL_CARDS and activeDeck with improved stats
-    const baseCard = ALL_CARDS[cardId];
     if (baseCard) {
       baseCard.level = newLevel;
       baseCard.damage = Math.round(baseCard.damage * 1.15);
@@ -1016,7 +1185,6 @@ export default function App() {
       }
       return {
         ...p,
-        coins: newCoins,
         level: nextLvl,
         exp: nextExp,
         maxExp: nextMaxExp,
@@ -1041,10 +1209,12 @@ export default function App() {
   // Daily Spin Reward Handler
   const handleClaimSpinReward = (reward: SpinReward) => {
     setHasFreeSpin(false);
+    const claimId = currencyService.generateClaimId(`spin_${Date.now()}`);
     if (reward.type === 'coins') {
-      setPlayerProfile((p) => ({ ...p, coins: p.coins + reward.amount }));
+      currencyService.creditCoins(reward.amount, 'reward_spin', claimId, `Daily Wheel: ${reward.label}`);
+      handleShowCoinAnimation(reward.amount, reward.label);
     } else if (reward.type === 'gems') {
-      setPlayerProfile((p) => ({ ...p, gems: p.gems + reward.amount }));
+      currencyService.creditGems(reward.amount, 'reward_spin', claimId, `Daily Wheel: ${reward.label}`);
     } else if (reward.type === 'cards') {
       const allTypes = Object.keys(inventory) as CardType[];
       const awarded = allTypes[Math.floor(Math.random() * allTypes.length)];
@@ -1053,7 +1223,6 @@ export default function App() {
         [awarded]: { ...inv[awarded], cards: inv[awarded].cards + reward.amount },
       }));
     } else if (reward.type === 'chest') {
-      // Find empty slot or award coins
       const emptySlot = chestSlots.find((s) => s.isOpened);
       if (emptySlot) {
         setChestSlots((slots) =>
@@ -1074,14 +1243,15 @@ export default function App() {
           )
         );
       } else {
-        setPlayerProfile((p) => ({ ...p, coins: p.coins + 200 }));
+        currencyService.creditCoins(200, 'reward_spin', `${claimId}_alt`, 'Daily Wheel Chest Backup Coins');
+        handleShowCoinAnimation(200, 'Daily Wheel Coins');
       }
     }
   };
 
-  // Victory flow
+  // Victory navigation (Coins are authoritatively credited on battle conclusion)
   const handleNextLevel = () => {
-    setPlayerProfile((p) => ({ ...p, trophies: p.trophies + 15, coins: p.coins + currentLevel.rewardCoins }));
+    setPlayerProfile((p) => ({ ...p, trophies: p.trophies + 15 }));
     // Try to drop a chest in empty slot
     const emptySlot = chestSlots.find((s) => s.isOpened);
     if (emptySlot) {
@@ -1108,7 +1278,7 @@ export default function App() {
   };
 
   const handleReturnToHome = () => {
-    setPlayerProfile((p) => ({ ...p, trophies: p.trophies + 15, coins: p.coins + currentLevel.rewardCoins }));
+    setPlayerProfile((p) => ({ ...p, trophies: p.trophies + 15 }));
     setGameState('menu');
     setCurrentTab('battle');
   };
@@ -1226,6 +1396,10 @@ export default function App() {
                   onOpenTechModal={() => setShowTechModal(true)}
                   onOpenAvatarModal={() => setShowAvatarModal(true)}
                   onOpenNoAdsModal={() => setShowNoAdsModal(true)}
+                  onOpenRewardedAd={handleLaunchAd}
+                  onOpenDailyRewardModal={() => setShowDailyRewardModal(true)}
+                  onOpenLedgerModal={() => setShowLedgerModal(true)}
+                  onOpenEconomyModal={() => setShowEconomyModal(true)}
                 />
               )}
 
@@ -1236,6 +1410,14 @@ export default function App() {
                   playerCoins={playerProfile.coins}
                   onUpgradeCard={handleUpgradeCard}
                   onEquipCard={handleEquipCard}
+                  onCoinShortfall={(itemTitle, requiredCoins, currentCoins) => {
+                    setShortfallData({
+                      isOpen: true,
+                      itemTitle,
+                      requiredCoins,
+                      currentCoins,
+                    });
+                  }}
                 />
               )}
 
@@ -1243,23 +1425,25 @@ export default function App() {
                 <ShopView
                   playerCoins={playerProfile.coins}
                   playerGems={playerProfile.gems}
-                  onAddCoins={(amount) =>
-                    setPlayerProfile((p) => ({ ...p, coins: p.coins + amount }))
-                  }
-                  onAddGems={(amount) =>
-                    setPlayerProfile((p) => ({ ...p, gems: p.gems + amount }))
-                  }
+                  onAddCoins={(amount) => {
+                    const claimId = currencyService.generateClaimId('shop_pack');
+                    currencyService.creditCoins(amount, 'spend_coin_purchase', claimId, `Shop Purchase +${amount} Coins`);
+                    handleShowCoinAnimation(amount, 'Shop Vault Purchased');
+                  }}
+                  onAddGems={(amount) => {
+                    const claimId = currencyService.generateClaimId('shop_gem');
+                    currencyService.creditGems(amount, 'admin_grant', claimId, `Shop Refill +${amount} Gems`);
+                  }}
                   onDeductGems={(amount) => {
-                    if (playerProfile.gems >= amount) {
-                      setPlayerProfile((p) => ({ ...p, gems: p.gems - amount }));
-                      return true;
-                    }
-                    return false;
+                    const result = currencyService.spendGems(amount, 'spend_chest_purchase', 'Shop Purchase');
+                    return result.success;
                   }}
                   onOpenChestLoot={(tier) => {
                     const coinBonus = tier === 'magical' ? 1500 : tier === 'gold' ? 500 : 150;
                     const cardBonus = tier === 'magical' ? 50 : tier === 'gold' ? 25 : 10;
-                    setPlayerProfile((p) => ({ ...p, coins: p.coins + coinBonus }));
+                    const claimId = currencyService.generateClaimId(`shop_chest_${tier}`);
+                    currencyService.creditCoins(coinBonus, 'spend_chest_purchase', claimId, `Opened ${tier.toUpperCase()} Chest`);
+                    handleShowCoinAnimation(coinBonus, `${tier.toUpperCase()} Chest Loot`);
                     const allTypes = Object.keys(inventory) as CardType[];
                     const rand = allTypes[Math.floor(Math.random() * allTypes.length)];
                     setInventory((inv) => ({
@@ -1268,6 +1452,8 @@ export default function App() {
                     }));
                     confetti({ particleCount: 75, spread: 70, origin: { y: 0.5 } });
                   }}
+                  onOpenRewardedAd={handleLaunchAd}
+                  onOpenLedgerModal={() => setShowLedgerModal(true)}
                 />
               )}
 
@@ -1325,11 +1511,18 @@ export default function App() {
               playerGems={playerProfile.gems}
               isVip={playerProfile.isVip}
               onOpenAvatarModal={() => setShowAvatarModal(true)}
+              onOpenLedger={() => setShowLedgerModal(true)}
+              onOpenRewardedAd={() => handleLaunchAd('placement_home_reward')}
               isMuted={isMuted}
               onToggleMute={() => {
                 const muted = sounds.toggleMute();
                 setIsMuted(muted);
               }}
+              onPause={() => {
+                sounds.playClick();
+                setIsPaused(true);
+              }}
+              isPaused={isPaused}
             />
 
             {/* Battlefield Canvas */}
@@ -1344,8 +1537,11 @@ export default function App() {
                 draggedCard={draggedCard || selectedCard}
                 dragPos={dragPos}
                 onDeployCard={handleDeployCard}
-                isGameOver={gameState !== 'playing' || battleCountdown !== null}
+                isGameOver={gameState !== 'playing' || battleCountdown !== null || isPaused}
               />
+
+              {/* WeatherEffect Component on the Arena Grid */}
+              <WeatherEffect isPaused={isPaused || gameState !== 'playing'} />
 
               {/* BattleLog Component on the Arena Grid */}
               <BattleLog events={battleEvents} maxEvents={5} />
@@ -1384,7 +1580,36 @@ export default function App() {
               onSelectCard={setSelectedCard}
               onDragStartCard={handleDragStartCard}
               onSendEmote={handleSendEmote}
-              isGameOver={gameState !== 'playing' || battleCountdown !== null}
+              isGameOver={gameState !== 'playing' || battleCountdown !== null || isPaused}
+            />
+
+            {/* Match Paused Overlay Modal */}
+            <PauseModal
+              isOpen={isPaused}
+              onResume={() => {
+                sounds.playClick();
+                setIsPaused(false);
+              }}
+              onQuit={() => {
+                sounds.playClick();
+                setIsPaused(false);
+                setGameState('menu');
+                setCurrentTab('battle');
+              }}
+              currentLevel={currentLevel}
+              timeRemaining={timeRemaining}
+              bluePercent={bluePercent}
+              redPercent={redPercent}
+              isMuted={isMuted}
+              onToggleMute={() => {
+                const muted = sounds.toggleMute();
+                setIsMuted(muted);
+              }}
+              onOpenSettingsTab={() => {
+                setIsPaused(false);
+                setGameState('menu');
+                setCurrentTab('settings');
+              }}
             />
           </>
         )}
@@ -1395,9 +1620,12 @@ export default function App() {
         {gameState === 'victory' && (
           <VictoryModal
             level={currentLevel.level}
-            timeBonus={timeRemaining}
-            rewardCubes={currentLevel.rewardCubes + Math.floor(timeRemaining * 4)}
-            rewardCoins={currentLevel.rewardCoins}
+            timeBonus={matchRewardResult?.timeBonus ?? timeRemaining}
+            rewardCubes={matchRewardResult?.rewardCubes ?? (currentLevel.rewardCubes + Math.floor(timeRemaining * 4))}
+            rewardCoins={matchRewardResult?.rewardCoins ?? currentLevel.rewardCoins}
+            transactionClaimId={matchRewardResult?.claimId}
+            hasDoubledReward={matchRewardResult?.hasDoubledReward}
+            onDoubleRewardAd={handleDoubleBattleRewardWithAd}
             onNextLevel={handleNextLevel}
             onReplayLevel={() => startLevel(currentLevelIndex)}
             onReturnHome={handleReturnToHome}
@@ -1417,6 +1645,11 @@ export default function App() {
               <p className="text-xs text-blue-100 mt-1">
                 Red claimed {redPercent}% territory. Don't give up!
               </p>
+              {matchRewardResult && (
+                <div className="bg-[#0c2a6b] border border-blue-400/40 rounded-xl px-3 py-1.5 mt-2.5 text-xs font-black text-yellow-300 shadow">
+                  🪙 Participation Reward: +{matchRewardResult.rewardCoins} Coins
+                </div>
+              )}
               <div className="flex gap-2 w-full mt-5">
                 <button
                   onClick={() => {
@@ -1463,11 +1696,13 @@ export default function App() {
         onClose={() => setShowNoAdsModal(false)}
         isVipActive={!!playerProfile.isVip}
         onActivateVip={() => {
+          const claimId = currencyService.generateClaimId('vip_pack');
+          currencyService.creditCoins(1500, 'admin_grant', claimId, 'VIP Pack Coins');
+          currencyService.creditGems(200, 'admin_grant', `${claimId}_gems`, 'VIP Pack Gems');
+          handleShowCoinAnimation(1500, 'VIP Membership Activated!');
           setPlayerProfile((p) => ({
             ...p,
             isVip: true,
-            gems: p.gems + 200,
-            coins: p.coins + 1500,
           }));
         }}
       />
@@ -1488,7 +1723,7 @@ export default function App() {
       />
 
       {/* ======================================================== */}
-      {/* 10. AVATAR & NAME CUSTOMIZATION OVERLAY (Video 15-18s, 31-36s) */}
+      {/* 10. AVATAR & NAME CUSTOMIZATION OVERLAY                  */}
       {/* ======================================================== */}
       <AvatarSelectionModal
         isOpen={showAvatarModal}
@@ -1506,20 +1741,93 @@ export default function App() {
         isVip={!!playerProfile.isVip}
         isLiveInBattle={gameState === 'playing'}
         onDeductGems={(amount) => {
-          if (playerProfile.gems >= amount) {
-            setPlayerProfile((p) => ({ ...p, gems: p.gems - amount }));
-            return true;
-          }
-          return false;
+          const res = currencyService.spendGems(amount, 'spend_avatar_unlock', 'Avatar Unlock');
+          return res.success;
         }}
         onDeductCoins={(amount) => {
-          if (playerProfile.coins >= amount) {
-            setPlayerProfile((p) => ({ ...p, coins: p.coins - amount }));
-            return true;
-          }
-          return false;
+          const res = currencyService.spendCoins(amount, 'spend_avatar_unlock', 'Avatar Unlock');
+          return res.success;
+        }}
+        onCoinShortfall={(itemTitle, requiredCoins, currentCoins) => {
+          setShortfallData({
+            isOpen: true,
+            itemTitle,
+            requiredCoins,
+            currentCoins,
+          });
         }}
       />
+
+      {/* ======================================================== */}
+      {/* 11. REWARDED VIDEO AD MODAL (LevelPlay Simulation)       */}
+      {/* ======================================================== */}
+      <RewardedAdModal
+        isOpen={showRewardedAdModal}
+        placementId={activeAdPlacement}
+        customRewardCoins={activeAdRewardCoins}
+        onClose={() => setShowRewardedAdModal(false)}
+        onRewardClaimed={handleAdRewardClaimed}
+      />
+
+      {/* ======================================================== */}
+      {/* 12. 7-DAY DAILY REWARDS CALENDAR                        */}
+      {/* ======================================================== */}
+      <DailyRewardModal
+        isOpen={showDailyRewardModal}
+        onClose={() => setShowDailyRewardModal(false)}
+        onWatchBonusAd={() => {
+          setShowDailyRewardModal(false);
+          handleLaunchAd('placement_daily_bonus');
+        }}
+        onRewardClaimed={(coins) => handleShowCoinAnimation(coins, 'Daily Reward Claimed!')}
+      />
+
+      {/* ======================================================== */}
+      {/* 13. TRANSACTION HISTORY & WALLET AUDIT LEDGER            */}
+      {/* ======================================================== */}
+      <TransactionLedgerModal
+        isOpen={showLedgerModal}
+        onClose={() => setShowLedgerModal(false)}
+      />
+
+      {/* ======================================================== */}
+      {/* 14. ECONOMY RULES & UNITY C# SCRIPTS                     */}
+      {/* ======================================================== */}
+      <EconomyConfigModal
+        isOpen={showEconomyModal}
+        onClose={() => setShowEconomyModal(false)}
+        onConfigUpdated={() => {}}
+      />
+
+      {/* ======================================================== */}
+      {/* 15. COIN SHORTFALL DIALOG                                */}
+      {/* ======================================================== */}
+      <ShortfallDialog
+        isOpen={shortfallData.isOpen}
+        itemTitle={shortfallData.itemTitle}
+        requiredCoins={shortfallData.requiredCoins}
+        currentCoins={currencyService.getCoins()}
+        onClose={() => setShortfallData((prev) => ({ ...prev, isOpen: false }))}
+        onWatchAdForCoins={() => {
+          setShortfallData((prev) => ({ ...prev, isOpen: false }));
+          handleLaunchAd('placement_shortfall_aid');
+        }}
+        onOpenShop={() => {
+          setShortfallData((prev) => ({ ...prev, isOpen: false }));
+          setCurrentTab('shop');
+        }}
+      />
+
+      {/* ======================================================== */}
+      {/* 16. COIN REWARD ANIMATION UX                            */}
+      {/* ======================================================== */}
+      {coinAnimation && (
+        <CoinRewardAnimation
+          amount={coinAnimation.amount}
+          reason={coinAnimation.reason}
+          onComplete={() => setCoinAnimation(null)}
+        />
+      )}
     </div>
   );
 }

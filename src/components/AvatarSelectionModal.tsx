@@ -24,6 +24,7 @@ interface AvatarSelectionModalProps {
   playerCoins: number;
   onDeductGems: (amount: number) => boolean;
   onDeductCoins: (amount: number) => boolean;
+  onCoinShortfall?: (itemTitle: string, requiredCoins: number, currentCoins: number) => void;
   isVip: boolean;
   isLiveInBattle?: boolean;
 }
@@ -238,6 +239,7 @@ export const AvatarSelectionModal: React.FC<AvatarSelectionModalProps> = ({
   playerCoins,
   onDeductGems,
   onDeductCoins,
+  onCoinShortfall,
   isVip,
   isLiveInBattle = false,
 }) => {
@@ -285,8 +287,12 @@ export const AvatarSelectionModal: React.FC<AvatarSelectionModalProps> = ({
           setTimeout(() => setFeedbackMsg(null), 1500);
         }
       } else {
-        setFeedbackMsg(`Need ${item.costCoins} coins to unlock!`);
-        setTimeout(() => setFeedbackMsg(null), 1500);
+        if (onCoinShortfall) {
+          onCoinShortfall(`${item.name} Avatar`, item.costCoins, playerCoins);
+        } else {
+          setFeedbackMsg(`Need ${item.costCoins} coins to unlock!`);
+          setTimeout(() => setFeedbackMsg(null), 1500);
+        }
       }
       return;
     }
