@@ -10,6 +10,7 @@ interface VictoryModalProps {
   rewardCoins: number;
   onNextLevel: () => void;
   onReplayLevel: () => void;
+  onReturnHome?: () => void;
 }
 
 export const VictoryModal: React.FC<VictoryModalProps> = ({
@@ -19,6 +20,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
   rewardCoins,
   onNextLevel,
   onReplayLevel,
+  onReturnHome,
 }) => {
   useEffect(() => {
     sounds.playVictory();
@@ -124,12 +126,22 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
             CONTINUE
           </button>
 
-          <button
-            onClick={onReplayLevel}
-            className="py-2 text-xs font-bold text-slate-400 hover:text-white transition"
-          >
-            Replay Sector
-          </button>
+          <div className="flex gap-2 w-full">
+            {onReturnHome && (
+              <button
+                onClick={onReturnHome}
+                className="flex-1 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-sky-300 transition cursor-pointer"
+              >
+                🏠 Home Menu
+              </button>
+            )}
+            <button
+              onClick={onReplayLevel}
+              className="flex-1 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-xs font-bold text-slate-400 hover:text-white transition cursor-pointer"
+            >
+              Replay Sector
+            </button>
+          </div>
         </div>
       </div>
     </div>

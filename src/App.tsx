@@ -6,35 +6,137 @@ import { CommanderTutorial } from './components/CommanderTutorial';
 import { VictoryModal } from './components/VictoryModal';
 import { TechStackGuideModal } from './components/TechStackGuideModal';
 import { UnityRoadmapModal } from './components/UnityRoadmapModal';
-import { Team, Card, Unit, Projectile, Particle, FloatingText, Emote, LevelConfig } from './types';
+import { BottomNavBar } from './components/BottomNavBar';
+import { HomeBattleView } from './components/HomeBattleView';
+import { CardCollectionView } from './components/CardCollectionView';
+import { DailySpinView } from './components/DailySpinView';
+import { ShopView } from './components/ShopView';
+import { SettingsView } from './components/SettingsView';
+import {
+  Team,
+  Card,
+  Unit,
+  Projectile,
+  Particle,
+  FloatingText,
+  Emote,
+  LevelConfig,
+  NavTab,
+  ChestSlot,
+  CardInventoryItem,
+  SpinReward,
+  PlayerProfile,
+  CardType,
+} from './types';
 import { ALL_CARDS, INITIAL_PLAYER_DECK, LEVELS } from './cardsData';
 import { sounds } from './audio';
-import { Play, RotateCcw, Sparkles, Trophy, FileCode } from 'lucide-react';
+import { Play, RotateCcw, Sparkles, Trophy, Home } from 'lucide-react';
+import confetti from 'canvas-confetti';
 
 export default function App() {
-  // Game state
-  const [gameState, setGameState] = useState<'splash' | 'playing' | 'victory' | 'defeat'>('splash');
+  // Navigation & High-level State
+  const [gameState, setGameState] = useState<'splash' | 'menu' | 'playing' | 'victory' | 'defeat'>('menu');
+  const [currentTab, setCurrentTab] = useState<NavTab>('battle');
   const [currentLevelIndex, setCurrentLevelIndex] = useState(0);
   const currentLevel: LevelConfig = LEVELS[currentLevelIndex] || LEVELS[0];
 
-  const [playerTrophies, setPlayerTrophies] = useState(15);
-  const [isMuted, setIsMuted] = useState(false);
+  // Modals
   const [showTechModal, setShowTechModal] = useState(false);
   const [showUnityModal, setShowUnityModal] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+
+  // Player Progression Profile
+  const [playerProfile, setPlayerProfile] = useState<PlayerProfile>({
+    name: 'Commander',
+    level: 3,
+    exp: 280,
+    maxExp: 500,
+    trophies: 35,
+    coins: 650,
+    gems: 95,
+  });
+
+  // Card Inventory
+  const [inventory, setInventory] = useState<Record<CardType, CardInventoryItem>>({
+    blaster: { id: 'blaster', level: 1, cards: 10, cardsRequired: 10, upgradeCost: 50 },
+    cannon: { id: 'cannon', level: 1, cards: 6, cardsRequired: 10, upgradeCost: 50 },
+    saw: { id: 'saw', level: 1, cards: 4, cardsRequired: 10, upgradeCost: 50 },
+    mortar: { id: 'mortar', level: 1, cards: 8, cardsRequired: 10, upgradeCost: 50 },
+    gatling: { id: 'gatling', level: 1, cards: 3, cardsRequired: 10, upgradeCost: 50 },
+    laser: { id: 'laser', level: 1, cards: 2, cardsRequired: 10, upgradeCost: 80 },
+    roller: { id: 'roller', level: 1, cards: 5, cardsRequired: 10, upgradeCost: 50 },
+  });
+
+  // Active 4-card Battle Deck
+  const [activeDeck, setActiveDeck] = useState<Card[]>([
+    ALL_CARDS.blaster,
+    ALL_CARDS.cannon,
+    ALL_CARDS.gatling,
+    ALL_CARDS.saw,
+  ]);
+
+  // Chest Slots (4 slots with timers)
+  const [chestSlots, setChestSlots] = useState<ChestSlot[]>([
+    {
+      id: 'slot-1',
+      name: 'Silver Chest',
+      tier: 'silver',
+      unlockDurationSeconds: 12,
+      unlockStartedAt: Date.now() - 4000,
+      isOpened: false,
+      coinsReward: 180,
+      gemsReward: 6,
+      cardsReward: 8,
+    },
+    {
+      id: 'slot-2',
+      name: 'Gold Chest',
+      tier: 'gold',
+      unlockDurationSeconds: 60,
+      unlockStartedAt: null,
+      isOpened: false,
+      coinsReward: 420,
+      gemsReward: 15,
+      cardsReward: 18,
+    },
+    {
+      id: 'slot-3',
+      name: 'Empty Slot',
+      tier: 'wooden',
+      unlockDurationSeconds: 0,
+      unlockStartedAt: null,
+      isOpened: true,
+      coinsReward: 0,
+      gemsReward: 0,
+      cardsReward: 0,
+    },
+    {
+      id: 'slot-4',
+      name: 'Wooden Chest',
+      tier: 'wooden',
+      unlockDurationSeconds: 8,
+      unlockStartedAt: null,
+      isOpened: false,
+      coinsReward: 95,
+      gemsReward: 2,
+      cardsReward: 4,
+    },
+  ]);
+
+  // Daily spin state
+  const [hasFreeSpin, setHasFreeSpin] = useState(true);
 
   // Match stats
-  const [timeRemaining, setTimeRemaining] = useState(180); // 3:00
+  const [timeRemaining, setTimeRemaining] = useState(180);
   const [bluePercent, setBluePercent] = useState(50);
   const [redPercent, setRedPercent] = useState(50);
-
-  // Tutorial dialogue
   const [tutorialMessage, setTutorialMessage] = useState<string | null>(null);
 
   // Deck & Energy
   const [energy, setEnergy] = useState(6);
   const maxEnergy = 10;
-  const [hand, setHand] = useState<Card[]>(INITIAL_PLAYER_DECK.slice(0, 4));
-  const [nextCard, setNextCard] = useState<Card>(INITIAL_PLAYER_DECK[4]);
+  const [hand, setHand] = useState<Card[]>(activeDeck.slice(0, 4));
+  const [nextCard, setNextCard] = useState<Card>(ALL_CARDS.roller);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [draggedCard, setDraggedCard] = useState<Card | null>(null);
   const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
@@ -66,6 +168,14 @@ export default function App() {
   gridRef.current = grid;
   const unitsRef = useRef(units);
   unitsRef.current = units;
+
+  // Real-time chest unlock timer interval
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setChestSlots((prev) => [...prev]);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Initialize or reset a level
   const startLevel = useCallback((lvlIndex: number) => {
@@ -121,8 +231,16 @@ export default function App() {
     setBluePercent(50);
     setRedPercent(50);
     setTutorialMessage(lvl.tutorialTip ?? null);
+
+    // Hand populated from activeDeck
+    setHand(activeDeck.slice(0, 4));
+    const remainingCards = Object.values(ALL_CARDS).filter(
+      (c) => !activeDeck.slice(0, 4).some((d) => d.id === c.id)
+    );
+    setNextCard(remainingCards[0] || ALL_CARDS.roller);
+
     setGameState('playing');
-  }, []);
+  }, [activeDeck]);
 
   // Recalculate territory percentage whenever grid updates
   const updateTerritoryPercentages = useCallback((currentGrid: Team[][]) => {
@@ -142,7 +260,7 @@ export default function App() {
     setBluePercent(bPercent);
     setRedPercent(rPercent);
 
-    // Instant victory condition: 100% or 99% dominance!
+    // Instant victory condition: 99% or 100% dominance
     if (bPercent >= 99 && gameState === 'playing') {
       setTimeout(() => {
         setGameState('victory');
@@ -159,487 +277,41 @@ export default function App() {
       const cMin = Math.max(0, Math.floor(centerX - radius));
       const cMax = Math.min(COLS - 1, Math.ceil(centerX + radius));
 
+      let paintedAny = false;
       for (let r = rMin; r <= rMax; r++) {
         for (let c = cMin; c <= cMax; c++) {
-          const dist = Math.hypot(c - centerX, r - centerY);
-          if (dist <= radius) {
-            nextGrid[r][c] = team;
+          const distSq = (c - centerX) ** 2 + (r - centerY) ** 2;
+          if (distSq <= radius ** 2) {
+            if (nextGrid[r][c] !== team) {
+              nextGrid[r][c] = team;
+              paintedAny = true;
+            }
           }
         }
       }
 
-      updateTerritoryPercentages(nextGrid);
+      if (paintedAny) {
+        updateTerritoryPercentages(nextGrid);
+      }
       return nextGrid;
     });
-
-    // Spawn splatter particles
-    const newParticles: Particle[] = [];
-    const color = team === 'blue' ? '#38bdf8' : '#fb7185';
-    for (let i = 0; i < 8; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = 0.5 + Math.random() * 1.5;
-      newParticles.push({
-        id: `splat-${Date.now()}-${Math.random()}`,
-        x: centerX,
-        y: centerY,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        color,
-        size: 2 + Math.random() * 3,
-        alpha: 1,
-        life: 0,
-        maxLife: 0.4 + Math.random() * 0.3,
-        shape: 'circle',
-      });
-    }
-    // Impact ring
-    newParticles.push({
-      id: `ring-${Date.now()}-${Math.random()}`,
-      x: centerX,
-      y: centerY,
-      vx: 0,
-      vy: 0,
-      color,
-      size: radius * 0.5,
-      alpha: 0.8,
-      life: 0,
-      maxLife: 0.3,
-      shape: 'ring',
-    });
-
-    setParticles((prev) => [...prev, ...newParticles]);
   }, [updateTerritoryPercentages]);
 
-  // Main 60 FPS Game Loop
-  useEffect(() => {
-    if (gameState !== 'playing') return;
-
-    let lastTime = performance.now();
-    let animId: number;
-
-    const tick = (now: number) => {
-      const dt = Math.min(0.1, (now - lastTime) / 1000);
-      lastTime = now;
-
-      // 1. Energy regeneration
-      setEnergy((prev) => Math.min(maxEnergy, prev + dt * 0.85));
-      enemyEnergyRef.current = Math.min(maxEnergy, enemyEnergyRef.current + dt * 0.8);
-
-      // 2. Unit shooting logic
-      setUnits((prevUnits) => {
-        const nextUnits = prevUnits.map((u) => ({ ...u }));
-        const newProj: Projectile[] = [];
-
-        nextUnits.forEach((unit) => {
-          // Speed boost passive: increases attack cooldown decay rate
-          const speedFactor = unit.passive?.type === 'speed_boost' ? (unit.speedMultiplier || 1.3) : 1.0;
-          unit.shootCooldown -= dt * speedFactor;
-          unit.barrelRecoil = Math.max(0, unit.barrelRecoil - dt * 4);
-
-          // Mobile Tank Unit locomotion with Territory Surge passive (+40% speed on painted territory)
-          if (unit.cardId === 'roller') {
-            const currentTile = gridRef.current[Math.max(0, Math.min(ROWS - 1, Math.floor(unit.y)))]?.[Math.max(0, Math.min(COLS - 1, Math.floor(unit.x)))];
-            const isFriendlyInk = currentTile === unit.team;
-            const surgeMultiplier = isFriendlyInk ? (unit.speedMultiplier || 1.4) : 1.0;
-            const speed = 1.2 * surgeMultiplier;
-            unit.y += (unit.team === 'blue' ? -speed : speed) * dt;
-            unit.y = Math.max(1, Math.min(ROWS - 2, unit.y));
-            splatGrid(unit.x, unit.y, 1.9, unit.team);
-          }
-
-          // Find closest target of opposite team
-          const enemies = nextUnits.filter((other) => other.team !== unit.team);
-          let targetX = unit.x;
-          let targetY = unit.team === 'blue' ? 0 : ROWS - 1;
-
-          if (enemies.length > 0) {
-            let closestDist = Infinity;
-            enemies.forEach((en) => {
-              const d = Math.hypot(en.x - unit.x, en.y - unit.y);
-              if (d < closestDist) {
-                closestDist = d;
-                targetX = en.x;
-                targetY = en.y;
-              }
-            });
-          }
-
-          // Smooth aim angle
-          const desiredAngle = Math.atan2(targetY - unit.y, targetX - unit.x);
-          unit.angle = desiredAngle - Math.PI / 2;
-
-          // Fire projectile
-          if (unit.shootCooldown <= 0) {
-            const cardData = ALL_CARDS[unit.cardId] || ALL_CARDS.cannon;
-            unit.shootCooldown = cardData.fireRate;
-            unit.barrelRecoil = 1;
-            unit.totalShotsFired++;
-
-            const isBlue = unit.team === 'blue';
-
-            if (unit.cardId === 'cannon') {
-              sounds.playCannonShot(!isBlue);
-              const angle = unit.angle + Math.PI / 2;
-              const speed = 7;
-              newProj.push({
-                id: `proj-${Date.now()}-${Math.random()}`,
-                team: unit.team,
-                type: 'cannonball',
-                x: unit.x,
-                y: unit.y,
-                vx: Math.cos(angle) * speed,
-                vy: Math.sin(angle) * speed,
-                startX: unit.x,
-                startY: unit.y,
-                targetX,
-                targetY,
-                paintRadius: cardData.paintRadius,
-                damage: cardData.damage,
-                life: 0,
-                maxLife: 2.2,
-                rotation: 0,
-              });
-            } else if (unit.cardId === 'mortar') {
-              sounds.playMortarLaunch();
-              // Lobs to enemy zone
-              const destY = isBlue ? Math.random() * 10 + 2 : ROWS - 1 - (Math.random() * 10 + 2);
-              const destX = Math.random() * (COLS - 4) + 2;
-              newProj.push({
-                id: `mortar-${Date.now()}-${Math.random()}`,
-                team: unit.team,
-                type: 'mortar',
-                x: unit.x,
-                y: unit.y,
-                vx: 0,
-                vy: 0,
-                startX: unit.x,
-                startY: unit.y,
-                targetX: destX,
-                targetY: destY,
-                arcProgress: 0,
-                paintRadius: cardData.paintRadius,
-                damage: cardData.damage,
-                life: 0,
-                maxLife: 1.4,
-                rotation: 0,
-              });
-            } else if (unit.cardId === 'gatling') {
-              sounds.playBlasterShot(!isBlue);
-              // Fan of 3 shots
-              const baseAngle = unit.angle + Math.PI / 2;
-              [-0.2, 0, 0.2].forEach((offset) => {
-                const angle = baseAngle + offset;
-                const speed = 10;
-                newProj.push({
-                  id: `bullet-${Date.now()}-${Math.random()}`,
-                  team: unit.team,
-                  type: 'bullet',
-                  x: unit.x,
-                  y: unit.y,
-                  vx: Math.cos(angle) * speed,
-                  vy: Math.sin(angle) * speed,
-                  startX: unit.x,
-                  startY: unit.y,
-                  targetX,
-                  targetY,
-                  paintRadius: cardData.paintRadius,
-                  damage: cardData.damage * 0.4,
-                  life: 0,
-                  maxLife: 1.6,
-                  rotation: 0,
-                });
-              });
-            } else {
-              // Blaster single shot
-              sounds.playBlasterShot(!isBlue);
-              const angle = unit.angle + Math.PI / 2;
-              const speed = 11;
-              newProj.push({
-                id: `bullet-${Date.now()}-${Math.random()}`,
-                team: unit.team,
-                type: 'bullet',
-                x: unit.x,
-                y: unit.y,
-                vx: Math.cos(angle) * speed,
-                vy: Math.sin(angle) * speed,
-                startX: unit.x,
-                startY: unit.y,
-                targetX,
-                targetY,
-                paintRadius: cardData.paintRadius,
-                damage: cardData.damage,
-                life: 0,
-                maxLife: 1.5,
-                rotation: 0,
-              });
-            }
-          }
-        });
-
-        if (newProj.length > 0) {
-          setProjectiles((prev) => [...prev, ...newProj]);
-        }
-
-        return nextUnits;
-      });
-
-      // 3. Projectiles physics & collision (incorporating Shield absorption)
-      setProjectiles((prevProj) => {
-        const remaining: Projectile[] = [];
-
-        prevProj.forEach((p) => {
-          p.life += dt;
-
-          if (p.type === 'saw') {
-            // Saw rolls along trajectory carving paint continuously!
-            p.x += p.vx * dt;
-            p.y += p.vy * dt;
-            p.rotation += 25 * dt;
-
-            // Inking tiles continuously under saw
-            splatGrid(p.x, p.y, p.paintRadius, p.team);
-
-            // Damage units hit by saw (respecting active Shielding)
-            setUnits((curUnits) => {
-              return curUnits
-                .map((u) => {
-                  if (u.team !== p.team && Math.hypot(u.x - p.x, u.y - p.y) < 1.5) {
-                    const rawDmg = p.damage * dt * 4;
-                    let remainingDmg = rawDmg;
-                    let curShield = u.shieldHp;
-
-                    // Shield absorbs damage first
-                    if (curShield > 0) {
-                      const absorbed = Math.min(curShield, remainingDmg);
-                      curShield -= absorbed;
-                      remainingDmg -= absorbed;
-                    }
-
-                    const newHp = u.hp - remainingDmg;
-                    if (newHp <= 0) {
-                      sounds.playExplosion();
-                      splatGrid(u.x, u.y, 3, p.team);
-                    }
-                    return { ...u, hp: newHp, shieldHp: curShield };
-                  }
-                  return u;
-                })
-                .filter((u) => u.hp > 0);
-            });
-
-            // Bounce off side walls
-            if (p.x <= 0.5 || p.x >= COLS - 1.5) {
-              p.vx = -p.vx;
-            }
-
-            if (p.y > 0 && p.y < ROWS) {
-              remaining.push(p);
-            }
-          } else if (p.type === 'mortar') {
-            // Parabolic arc progress
-            const progress = p.life / p.maxLife;
-            p.arcProgress = progress;
-            p.x = p.startX + (p.targetX - p.startX) * progress;
-            p.y = p.startY + (p.targetY - p.startY) * progress;
-
-            if (progress >= 1.0) {
-              // Mortar landing impact
-              sounds.playExplosion();
-              splatGrid(p.targetX, p.targetY, p.paintRadius, p.team);
-              // Splash damage to units (respecting Shielding)
-              setUnits((curUnits) =>
-                curUnits
-                  .map((u) => {
-                    if (u.team !== p.team && Math.hypot(u.x - p.targetX, u.y - p.targetY) < p.paintRadius) {
-                      let remDmg = p.damage;
-                      let sHp = u.shieldHp;
-                      if (sHp > 0) {
-                        const absorbed = Math.min(sHp, remDmg);
-                        sHp -= absorbed;
-                        remDmg -= absorbed;
-                      }
-
-                      const newHp = u.hp - remDmg;
-                      if (newHp <= 0) {
-                        sounds.playExplosion();
-                        splatGrid(u.x, u.y, 2.5, p.team);
-                      }
-                      return { ...u, hp: newHp, shieldHp: sHp };
-                    }
-                    return u;
-                  })
-                  .filter((u) => u.hp > 0)
-              );
-            } else {
-              remaining.push(p);
-            }
-          } else {
-            // Standard bullets and cannonballs (respecting Shielding)
-            p.x += p.vx * dt;
-            p.y += p.vy * dt;
-
-            // Check collision with enemy units
-            let hitUnit = false;
-            setUnits((curUnits) => {
-              return curUnits
-                .map((u) => {
-                  if (!hitUnit && u.team !== p.team && Math.hypot(u.x - p.x, u.y - p.y) < 1.1) {
-                    hitUnit = true;
-                    let remDmg = p.damage;
-                    let sHp = u.shieldHp;
-
-                    // Shield absorbs damage first
-                    if (sHp > 0) {
-                      const absorbed = Math.min(sHp, remDmg);
-                      sHp -= absorbed;
-                      remDmg -= absorbed;
-                    }
-
-                    const newHp = u.hp - remDmg;
-                    sounds.playPaintSplat();
-                    splatGrid(p.x, p.y, p.paintRadius, p.team);
-                    if (newHp <= 0) {
-                      sounds.playExplosion();
-                      splatGrid(u.x, u.y, 2.5, p.team);
-                    }
-                    return { ...u, hp: newHp, shieldHp: sHp };
-                  }
-                  return u;
-                })
-                .filter((u) => u.hp > 0);
-            });
-
-            if (!hitUnit) {
-              // Paint on landing when out of range or reaches border
-              if (p.life >= p.maxLife || p.y <= 0 || p.y >= ROWS || p.x <= 0 || p.x >= COLS) {
-                sounds.playPaintSplat();
-                splatGrid(p.x, p.y, p.paintRadius, p.team);
-              } else {
-                remaining.push(p);
-              }
-            }
-          }
-        });
-
-        return remaining;
-      });
-
-      // 4. Particles update
-      setParticles((prevPt) =>
-        prevPt
-          .map((pt) => ({
-            ...pt,
-            x: pt.x + pt.vx * dt,
-            y: pt.y + pt.vy * dt,
-            life: pt.life + dt,
-            alpha: 1 - (pt.life + dt) / pt.maxLife,
-          }))
-          .filter((pt) => pt.life < pt.maxLife)
-      );
-
-      // 5. Floating text update
-      setFloatingTexts((prevFt) =>
-        prevFt
-          .map((ft) => ({
-            ...ft,
-            y: ft.y - dt * 2,
-            life: ft.life + dt,
-            alpha: 1 - (ft.life + dt) / ft.maxLife,
-          }))
-          .filter((ft) => ft.life < ft.maxLife)
-      );
-
-      // 6. Enemy AI Decision
-      if (now - lastAiPlayRef.current > currentLevel.opponentAiInterval) {
-        lastAiPlayRef.current = now;
-        const aiChoices: Array<'cannon' | 'saw' | 'gatling' | 'mortar'> = ['cannon', 'saw', 'gatling', 'mortar'];
-        const chosen = aiChoices[Math.floor(Math.random() * aiChoices.length)];
-        const cardObj = ALL_CARDS[chosen];
-
-        if (enemyEnergyRef.current >= cardObj.cost) {
-          enemyEnergyRef.current -= cardObj.cost;
-
-          if (chosen === 'saw') {
-            // Launch enemy saw blade from top downwards!
-            sounds.playSawLaunch();
-            const startX = Math.random() * (COLS - 4) + 2;
-            const targetX = Math.random() * (COLS - 4) + 2;
-            const dirX = targetX - startX;
-            const dirY = ROWS;
-            const len = Math.hypot(dirX, dirY);
-            const speed = 14;
-
-            setProjectiles((prev) => [
-              ...prev,
-              {
-                id: `enemy-saw-${Date.now()}`,
-                team: 'red',
-                type: 'saw',
-                x: startX,
-                y: 1,
-                vx: (dirX / len) * speed,
-                vy: (dirY / len) * speed,
-                startX,
-                startY: 1,
-                targetX,
-                targetY: ROWS,
-                paintRadius: 2.2,
-                damage: 120,
-                life: 0,
-                maxLife: 3.5,
-                rotation: 0,
-              },
-            ]);
-          } else {
-            // Place red turret in red territory
-            const spawnX = Math.floor(Math.random() * (COLS - 4)) + 2;
-            const spawnY = Math.floor(Math.random() * 8) + 2;
-
-            setUnits((prev) => [
-              ...prev,
-              {
-                id: `enemy-unit-${Date.now()}`,
-                team: 'red',
-                cardId: chosen,
-                x: spawnX,
-                y: spawnY,
-                hp: cardObj.hp,
-                maxHp: cardObj.hp,
-                shieldHp: cardObj.passive?.shieldValue ?? 0,
-                maxShieldHp: cardObj.passive?.shieldValue ?? 0,
-                speedMultiplier: cardObj.passive?.speedFactor ?? 1.0,
-                level: currentLevel.level,
-                angle: Math.PI / 2,
-                shootCooldown: 0.8,
-                barrelRecoil: 0,
-                totalShotsFired: 0,
-                passive: cardObj.passive,
-              },
-            ]);
-          }
-        }
-      }
-
-      animId = requestAnimationFrame(tick);
-    };
-
-    animId = requestAnimationFrame(tick);
-
-    return () => {
-      cancelAnimationFrame(animId);
-    };
-  }, [gameState, currentLevel, splatGrid]);
-
-  // Match countdown clock
+  // Energy regeneration & match timer loop
   useEffect(() => {
     if (gameState !== 'playing') return;
 
     const timer = setInterval(() => {
+      // Regenerate player energy (0.35 per 200ms -> ~1.75 per sec)
+      setEnergy((prev) => Math.min(maxEnergy, +(prev + 0.35).toFixed(1)));
+      // Regenerate enemy AI energy
+      enemyEnergyRef.current = Math.min(10, enemyEnergyRef.current + 0.3);
+
+      // Decrement match timer
       setTimeRemaining((prev) => {
         if (prev <= 1) {
-          clearInterval(timer);
-          // End of match: winner with highest %
-          if (bluePercent > redPercent) {
+          // Match ends: determine victor based on territory percentage
+          if (bluePercent >= redPercent) {
             setGameState('victory');
           } else {
             sounds.playDefeat();
@@ -652,63 +324,416 @@ export default function App() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [gameState, bluePercent, redPercent]);
+  }, [gameState, bluePercent, redPercent, maxEnergy]);
 
-  // Handle player deploying a card from hand
-  const handleDeployCard = (card: Card, gridX: number, gridY: number) => {
-    if (energy < card.cost || gameState !== 'playing') return;
+  // Enemy AI Logic Loop
+  useEffect(() => {
+    if (gameState !== 'playing') return;
 
-    setEnergy((prev) => prev - card.cost);
+    const aiInterval = setInterval(() => {
+      const now = Date.now();
+      if (now - lastAiPlayRef.current < currentLevel.opponentAiInterval) return;
 
-    if (card.id === 'saw') {
-      // Launch Buzz Saw
-      sounds.playSawLaunch();
-      const startX = gridX;
-      const startY = gridY;
-      const targetX = gridX;
-      const targetY = 0;
-      const speed = 16;
+      const aiCards = [ALL_CARDS.cannon, ALL_CARDS.blaster, ALL_CARDS.gatling, ALL_CARDS.saw, ALL_CARDS.mortar];
+      const pick = aiCards[Math.floor(Math.random() * aiCards.length)];
 
+      if (enemyEnergyRef.current >= pick.cost) {
+        enemyEnergyRef.current -= pick.cost;
+        lastAiPlayRef.current = now;
+
+        const isSaw = pick.id === 'saw';
+        const spawnX = Math.floor(Math.random() * (COLS - 4)) + 2;
+        const spawnY = isSaw ? 2 : Math.floor(Math.random() * 8) + 2;
+
+        if (isSaw) {
+          sounds.playSawWhir();
+          setProjectiles((prev) => [
+            ...prev,
+            {
+              id: `saw-enemy-${Date.now()}`,
+              team: 'red',
+              type: 'saw',
+              x: spawnX,
+              y: spawnY,
+              vx: 0,
+              vy: 0.35 * (pick.passive?.speedFactor ?? 1.0),
+              startX: spawnX,
+              startY: spawnY,
+              targetX: spawnX,
+              targetY: ROWS - 1,
+              paintRadius: pick.paintRadius,
+              damage: pick.damage,
+              life: 180,
+              maxLife: 180,
+              rotation: 0,
+            },
+          ]);
+        } else {
+          sounds.playCardDeploy();
+          setUnits((prev) => [
+            ...prev,
+            {
+              id: `enemy-unit-${Date.now()}`,
+              team: 'red',
+              cardId: pick.id,
+              x: spawnX,
+              y: spawnY,
+              hp: pick.hp,
+              maxHp: pick.hp,
+              shieldHp: pick.passive?.shieldValue ?? 0,
+              maxShieldHp: pick.passive?.shieldValue ?? 0,
+              speedMultiplier: pick.passive?.speedFactor ?? 1.0,
+              level: currentLevel.level,
+              angle: Math.PI / 2,
+              shootCooldown: pick.fireRate,
+              barrelRecoil: 0,
+              totalShotsFired: 0,
+              passive: pick.passive,
+            },
+          ]);
+        }
+      }
+    }, 1200);
+
+    return () => clearInterval(aiInterval);
+  }, [gameState, currentLevel]);
+
+  // Main 60 FPS Combat, Recoil & Projectile Physics loop
+  useEffect(() => {
+    if (gameState !== 'playing') return;
+
+    let animId: number;
+
+    const gameTick = () => {
+      // 1. Update Units
+      setUnits((prevUnits) => {
+        const nextUnits: Unit[] = [];
+
+        prevUnits.forEach((unit) => {
+          if (unit.hp <= 0) {
+            // Unit defeated
+            sounds.playUnitExplode();
+            // Emit death particles
+            setParticles((p) => [
+              ...p,
+              ...Array.from({ length: 12 }, () => ({
+                id: `die-p-${Math.random()}`,
+                x: unit.x,
+                y: unit.y,
+                vx: (Math.random() - 0.5) * 0.4,
+                vy: (Math.random() - 0.5) * 0.4,
+                color: unit.team === 'blue' ? '#38bdf8' : '#fb7185',
+                size: Math.random() * 5 + 3,
+                alpha: 1,
+                life: 30,
+                maxLife: 30,
+                shape: 'circle' as const,
+              })),
+            ]);
+            return;
+          }
+
+          // Mobile units (e.g. roller) drive forward
+          let nextX = unit.x;
+          let nextY = unit.y;
+          if (unit.cardId === 'roller') {
+            const dir = unit.team === 'blue' ? -0.04 : 0.04;
+            const currentTileOwner = gridRef.current[Math.floor(unit.y)]?.[Math.floor(unit.x)];
+            const terrainBonus = currentTileOwner === unit.team ? (unit.passive?.speedFactor ?? 1.4) : 1.0;
+            nextY += dir * terrainBonus;
+            splatGrid(Math.round(nextX), Math.round(nextY), 1.8, unit.team);
+          }
+
+          // Target acquisition: find closest opposing unit
+          const enemies = unitsRef.current.filter((u) => u.team !== unit.team && u.hp > 0);
+          let targetAngle = unit.team === 'blue' ? -Math.PI / 2 : Math.PI / 2;
+
+          if (enemies.length > 0) {
+            let closestDist = Infinity;
+            let closestEnemy: Unit | null = null;
+            enemies.forEach((enemy) => {
+              const d = Math.hypot(enemy.x - unit.x, enemy.y - unit.y);
+              if (d < closestDist) {
+                closestDist = d;
+                closestEnemy = enemy;
+              }
+            });
+
+            if (closestEnemy) {
+              const enemyUnit: Unit = closestEnemy;
+              targetAngle = Math.atan2(enemyUnit.y - unit.y, enemyUnit.x - unit.x);
+            }
+          }
+
+          // Smooth turret rotation
+          let diffAngle = targetAngle - unit.angle;
+          while (diffAngle < -Math.PI) diffAngle += Math.PI * 2;
+          while (diffAngle > Math.PI) diffAngle -= Math.PI * 2;
+          const nextAngle = unit.angle + diffAngle * 0.12;
+
+          // Shooting cooldown tick
+          let nextCooldown = unit.shootCooldown - 0.016;
+          let nextRecoil = Math.max(0, unit.barrelRecoil - 0.08);
+
+          if (nextCooldown <= 0) {
+            const cardData = ALL_CARDS[unit.cardId] || ALL_CARDS.cannon;
+            const isEnemy = unit.team === 'red';
+            nextRecoil = 1.0;
+
+            // Apply speed boost passive if unit has speed boost
+            const cadenceBonus = unit.passive?.speedFactor ?? 1.0;
+            nextCooldown = cardData.fireRate > 0 ? (cardData.fireRate / cadenceBonus) : 1.0;
+
+            const projType =
+              unit.cardId === 'cannon'
+                ? 'cannonball'
+                : unit.cardId === 'mortar'
+                ? 'mortar'
+                : 'bullet';
+
+            if (projType === 'cannonball') {
+              sounds.playCannonShot(isEnemy);
+            } else {
+              sounds.playBlasterShot(isEnemy);
+            }
+
+            // Spawn projectile
+            const bulletSpeed = 0.45 * (unit.passive?.type === 'rapid_overcharge' ? 1.25 : 1.0);
+            const vx = Math.cos(nextAngle) * bulletSpeed;
+            const vy = Math.sin(nextAngle) * bulletSpeed;
+
+            setProjectiles((prev) => [
+              ...prev,
+              {
+                id: `proj-${Date.now()}-${Math.random()}`,
+                team: unit.team,
+                type: projType,
+                x: unit.x + Math.cos(nextAngle) * 0.8,
+                y: unit.y + Math.sin(nextAngle) * 0.8,
+                vx,
+                vy,
+                startX: unit.x,
+                startY: unit.y,
+                targetX: unit.x + Math.cos(nextAngle) * cardData.range,
+                targetY: unit.y + Math.sin(nextAngle) * cardData.range,
+                paintRadius: cardData.paintRadius,
+                damage: cardData.damage,
+                life: 90,
+                maxLife: 90,
+                rotation: nextAngle,
+              },
+            ]);
+          }
+
+          nextUnits.push({
+            ...unit,
+            x: nextX,
+            y: nextY,
+            angle: nextAngle,
+            shootCooldown: nextCooldown,
+            barrelRecoil: nextRecoil,
+          });
+        });
+
+        return nextUnits;
+      });
+
+      // 2. Update Projectiles & Collisions
+      setProjectiles((prevProj) => {
+        const nextProj: Projectile[] = [];
+
+        prevProj.forEach((p) => {
+          const nextX = p.x + p.vx;
+          const nextY = p.y + p.vy;
+          const nextLife = p.life - 1;
+
+          // Check if projectile reached edge of arena
+          const hitWall = nextX < 0 || nextX >= COLS || nextY < 0 || nextY >= ROWS;
+
+          if (hitWall || nextLife <= 0) {
+            // Splat paint on impact!
+            sounds.playPaintSplat();
+            splatGrid(Math.round(nextX), Math.round(nextY), p.paintRadius, p.team);
+
+            // Emit paint splatter particles
+            setParticles((particlesList) => [
+              ...particlesList,
+              ...Array.from({ length: 8 }, () => ({
+                id: `splat-p-${Math.random()}`,
+                x: nextX,
+                y: nextY,
+                vx: (Math.random() - 0.5) * 0.35,
+                vy: (Math.random() - 0.5) * 0.35,
+                color: p.team === 'blue' ? '#38bdf8' : '#fb7185',
+                size: Math.random() * 4 + 2,
+                alpha: 1,
+                life: 25,
+                maxLife: 25,
+                shape: 'circle' as const,
+              })),
+            ]);
+            return;
+          }
+
+          // Check direct unit collision
+          let collided = false;
+          unitsRef.current.forEach((targetUnit) => {
+            if (targetUnit.team !== p.team && targetUnit.hp > 0) {
+              const d = Math.hypot(targetUnit.x - nextX, targetUnit.y - nextY);
+              if (d < 1.1) {
+                collided = true;
+                sounds.playPaintSplat();
+                splatGrid(Math.round(nextX), Math.round(nextY), p.paintRadius, p.team);
+
+                // Apply damage (shield absorbs first if active)
+                setUnits((curUnits) =>
+                  curUnits.map((u) => {
+                    if (u.id === targetUnit.id) {
+                      let remainingDmg = p.damage;
+                      let newShield = u.shieldHp;
+                      if (newShield > 0) {
+                        if (newShield >= remainingDmg) {
+                          newShield -= remainingDmg;
+                          remainingDmg = 0;
+                        } else {
+                          remainingDmg -= newShield;
+                          newShield = 0;
+                        }
+                      }
+                      const newHp = Math.max(0, u.hp - remainingDmg);
+                      return {
+                        ...u,
+                        hp: newHp,
+                        shieldHp: newShield,
+                      };
+                    }
+                    return u;
+                  })
+                );
+
+                // Show floating damage number
+                setFloatingTexts((ft) => [
+                  ...ft,
+                  {
+                    id: `dmg-${Date.now()}-${Math.random()}`,
+                    x: nextX,
+                    y: nextY - 0.5,
+                    text: `-${p.damage}`,
+                    color: p.team === 'blue' ? '#38bdf8' : '#fb7185',
+                    alpha: 1,
+                    life: 40,
+                    maxLife: 40,
+                  },
+                ]);
+              }
+            }
+          });
+
+          if (!collided) {
+            nextProj.push({
+              ...p,
+              x: nextX,
+              y: nextY,
+              life: nextLife,
+              rotation: p.rotation + 0.15,
+            });
+          }
+        });
+
+        return nextProj;
+      });
+
+      // 3. Update Particles
+      setParticles((prevP) =>
+        prevP
+          .map((p) => ({
+            ...p,
+            x: p.x + p.vx,
+            y: p.y + p.vy,
+            life: p.life - 1,
+            alpha: p.life / p.maxLife,
+          }))
+          .filter((p) => p.life > 0)
+      );
+
+      // 4. Update Floating Damage Text
+      setFloatingTexts((prevFt) =>
+        prevFt
+          .map((ft) => ({
+            ...ft,
+            y: ft.y - 0.02,
+            life: ft.life - 1,
+            alpha: ft.life / ft.maxLife,
+          }))
+          .filter((ft) => ft.life > 0)
+      );
+
+      // 5. Clean expired emotes (after 4 seconds)
+      setEmotes((prev) => prev.filter((e) => Date.now() - e.createdAt < 4000));
+
+      animId = requestAnimationFrame(gameTick);
+    };
+
+    animId = requestAnimationFrame(gameTick);
+    return () => cancelAnimationFrame(animId);
+  }, [gameState, splatGrid]);
+
+  // Card Deployment by Player
+  const handleDeployCard = (card: Card, gx: number, gy: number) => {
+    if (energy < card.cost) return;
+
+    // Check territorial placement validity
+    const isSaw = card.id === 'saw';
+    const isBlueTerritory = grid[gy]?.[gx] === 'blue';
+
+    if (!isSaw && !isBlueTerritory) {
+      // Cannot place regular turret on enemy red territory
+      return;
+    }
+
+    setEnergy((prev) => +(prev - card.cost).toFixed(1));
+
+    if (isSaw) {
+      sounds.playSawWhir();
       setProjectiles((prev) => [
         ...prev,
         {
-          id: `player-saw-${Date.now()}`,
+          id: `saw-blue-${Date.now()}`,
           team: 'blue',
           type: 'saw',
-          x: startX,
-          y: startY,
+          x: gx,
+          y: gy,
           vx: 0,
-          vy: -speed, // shoot straight up into enemy territory!
-          startX,
-          startY,
-          targetX,
-          targetY,
+          vy: -0.42 * (card.passive?.speedFactor ?? 1.0),
+          startX: gx,
+          startY: gy,
+          targetX: gx,
+          targetY: 0,
           paintRadius: card.paintRadius,
           damage: card.damage,
-          life: 0,
-          maxLife: 3.5,
+          life: 180,
+          maxLife: 180,
           rotation: 0,
         },
       ]);
     } else {
-      // Place turret on field
-      sounds.playCardDrop();
+      sounds.playCardDeploy();
       setUnits((prev) => [
         ...prev,
         {
           id: `player-unit-${Date.now()}`,
           team: 'blue',
           cardId: card.id,
-          x: gridX,
-          y: gridY,
+          x: gx,
+          y: gy,
           hp: card.hp,
           maxHp: card.hp,
           shieldHp: card.passive?.shieldValue ?? 0,
           maxShieldHp: card.passive?.shieldValue ?? 0,
           speedMultiplier: card.passive?.speedFactor ?? 1.0,
           level: card.level,
-          angle: -Math.PI / 2, // facing up
-          shootCooldown: 0.3, // fire fast initial shot
+          angle: -Math.PI / 2, // facing up towards enemy
+          shootCooldown: card.fireRate > 0 ? (card.fireRate / (card.passive?.speedFactor ?? 1.0)) : 1.0,
           barrelRecoil: 0,
           totalShotsFired: 0,
           passive: card.passive,
@@ -716,7 +741,7 @@ export default function App() {
       ]);
     }
 
-    // Cycle card: replace played card with nextCard, generate fresh nextCard
+    // Cycle next card from activeDeck/ALL_CARDS
     setHand((prevHand) => {
       const idx = prevHand.findIndex((c) => c.id === card.id);
       if (idx === -1) return prevHand;
@@ -765,7 +790,6 @@ export default function App() {
       },
     ]);
 
-    // Bot chance to respond with an emote
     setTimeout(() => {
       if (gameState === 'playing') {
         const botEmojis = ['😈', '😎', '😡', '😂'];
@@ -785,12 +809,201 @@ export default function App() {
     }, 1200);
   };
 
+  // Chest Unlocking Handlers
+  const handleStartUnlockChest = (slotId: string) => {
+    sounds.playClick();
+    setChestSlots((prev) =>
+      prev.map((s) => (s.id === slotId ? { ...s, unlockStartedAt: Date.now() } : s))
+    );
+  };
+
+  const handleOpenChest = (slotId: string) => {
+    setChestSlots((prev) =>
+      prev.map((slot) => {
+        if (slot.id === slotId) {
+          sounds.playRewardClaim();
+          setPlayerProfile((p) => ({
+            ...p,
+            coins: p.coins + slot.coinsReward,
+            gems: p.gems + slot.gemsReward,
+            exp: p.exp + 40,
+          }));
+
+          // Award random card shards
+          const allTypes = Object.keys(inventory) as CardType[];
+          const awardedType = allTypes[Math.floor(Math.random() * allTypes.length)];
+          setInventory((inv) => ({
+            ...inv,
+            [awardedType]: {
+              ...inv[awardedType],
+              cards: inv[awardedType].cards + slot.cardsReward,
+            },
+          }));
+
+          confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
+          return {
+            ...slot,
+            isOpened: true,
+            unlockStartedAt: null,
+          };
+        }
+        return slot;
+      })
+    );
+  };
+
+  // Card Upgrade Handler
+  const handleUpgradeCard = (cardId: CardType) => {
+    const inv = inventory[cardId];
+    if (!inv || inv.cards < inv.cardsRequired || playerProfile.coins < inv.upgradeCost) return;
+
+    // Deduct coins & upgrade inventory
+    const newCoins = playerProfile.coins - inv.upgradeCost;
+    const newLevel = inv.level + 1;
+    const newCards = inv.cards - inv.cardsRequired;
+    const newRequired = Math.round(inv.cardsRequired * 1.8);
+    const newCost = Math.round(inv.upgradeCost * 2);
+
+    setInventory((prev) => ({
+      ...prev,
+      [cardId]: {
+        ...inv,
+        level: newLevel,
+        cards: newCards,
+        cardsRequired: newRequired,
+        upgradeCost: newCost,
+      },
+    }));
+
+    // Update ALL_CARDS and activeDeck with improved stats
+    const baseCard = ALL_CARDS[cardId];
+    if (baseCard) {
+      baseCard.level = newLevel;
+      baseCard.damage = Math.round(baseCard.damage * 1.15);
+      baseCard.hp = Math.round(baseCard.hp * 1.15);
+      if (baseCard.passive?.shieldValue) {
+        baseCard.passive.shieldValue = Math.round(baseCard.passive.shieldValue * 1.2);
+      }
+    }
+
+    setActiveDeck((prev) =>
+      prev.map((c) => (c.id === cardId ? { ...baseCard } : c))
+    );
+
+    // Give player EXP
+    setPlayerProfile((p) => {
+      const expGain = 50 * newLevel;
+      let nextExp = p.exp + expGain;
+      let nextLvl = p.level;
+      let nextMaxExp = p.maxExp;
+      if (nextExp >= nextMaxExp) {
+        nextExp -= nextMaxExp;
+        nextLvl += 1;
+        nextMaxExp = Math.round(nextMaxExp * 1.5);
+      }
+      return {
+        ...p,
+        coins: newCoins,
+        level: nextLvl,
+        exp: nextExp,
+        maxExp: nextMaxExp,
+      };
+    });
+
+    confetti({ particleCount: 50, spread: 50, origin: { y: 0.5 } });
+  };
+
+  // Equip card into deck
+  const handleEquipCard = (cardId: CardType, slotIndex: number) => {
+    const targetCard = ALL_CARDS[cardId];
+    if (!targetCard) return;
+
+    setActiveDeck((prev) => {
+      const nextDeck = [...prev];
+      nextDeck[slotIndex] = targetCard;
+      return nextDeck;
+    });
+  };
+
+  // Daily Spin Reward Handler
+  const handleClaimSpinReward = (reward: SpinReward) => {
+    setHasFreeSpin(false);
+    if (reward.type === 'coins') {
+      setPlayerProfile((p) => ({ ...p, coins: p.coins + reward.amount }));
+    } else if (reward.type === 'gems') {
+      setPlayerProfile((p) => ({ ...p, gems: p.gems + reward.amount }));
+    } else if (reward.type === 'cards') {
+      const allTypes = Object.keys(inventory) as CardType[];
+      const awarded = allTypes[Math.floor(Math.random() * allTypes.length)];
+      setInventory((inv) => ({
+        ...inv,
+        [awarded]: { ...inv[awarded], cards: inv[awarded].cards + reward.amount },
+      }));
+    } else if (reward.type === 'chest') {
+      // Find empty slot or award coins
+      const emptySlot = chestSlots.find((s) => s.isOpened);
+      if (emptySlot) {
+        setChestSlots((slots) =>
+          slots.map((s) =>
+            s.id === emptySlot.id
+              ? {
+                  ...s,
+                  name: 'Silver Crate',
+                  tier: 'silver',
+                  unlockDurationSeconds: 15,
+                  unlockStartedAt: null,
+                  isOpened: false,
+                  coinsReward: 180,
+                  gemsReward: 6,
+                  cardsReward: 8,
+                }
+              : s
+          )
+        );
+      } else {
+        setPlayerProfile((p) => ({ ...p, coins: p.coins + 200 }));
+      }
+    }
+  };
+
   // Victory flow
   const handleNextLevel = () => {
-    setPlayerTrophies((prev) => prev + 15);
+    setPlayerProfile((p) => ({ ...p, trophies: p.trophies + 15, coins: p.coins + currentLevel.rewardCoins }));
+    // Try to drop a chest in empty slot
+    const emptySlot = chestSlots.find((s) => s.isOpened);
+    if (emptySlot) {
+      setChestSlots((slots) =>
+        slots.map((s) =>
+          s.id === emptySlot.id
+            ? {
+                ...s,
+                name: 'Victory Chest',
+                tier: currentLevel.level % 2 === 0 ? 'silver' : 'wooden',
+                unlockDurationSeconds: 15,
+                unlockStartedAt: null,
+                isOpened: false,
+                coinsReward: 120 + currentLevel.level * 30,
+                gemsReward: 3 + currentLevel.level,
+                cardsReward: 6 + currentLevel.level * 2,
+              }
+            : s
+        )
+      );
+    }
     const nextIdx = (currentLevelIndex + 1) % LEVELS.length;
     startLevel(nextIdx);
   };
+
+  const handleReturnToHome = () => {
+    setPlayerProfile((p) => ({ ...p, trophies: p.trophies + 15, coins: p.coins + currentLevel.rewardCoins }));
+    setGameState('menu');
+    setCurrentTab('battle');
+  };
+
+  // Count upgradeable cards for notification badge
+  const upgradeableCardsCount = Object.values(inventory).filter(
+    (item) => item.cards >= item.cardsRequired && playerProfile.coins >= item.upgradeCost
+  ).length;
 
   return (
     <div
@@ -800,23 +1013,29 @@ export default function App() {
     >
       {/* Mobile Portrait Shell */}
       <div className="w-full h-full max-w-full sm:max-w-[440px] flex flex-col items-center justify-between relative bg-[#090e1a] sm:shadow-[0_0_60px_rgba(0,0,0,0.9)] sm:border-x sm:border-slate-800/60 overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
-        {/* 1. START / SPLASH SCREEN (Copy-to-copy match of frames 16.6s & 23.7s) */}
+        {/* ======================================================== */}
+        {/* 1. START / SPLASH SCREEN (Frames 16.6s & 23.7s from Video) */}
+        {/* ======================================================== */}
         {gameState === 'splash' && (
           <div
-            onClick={() => startLevel(currentLevelIndex)}
+            onClick={() => {
+              sounds.playClick();
+              setGameState('menu');
+              setCurrentTab('battle');
+            }}
             className="absolute inset-0 z-50 flex flex-col items-center justify-between p-6 cursor-pointer overflow-hidden select-none"
             style={{
               background: 'radial-gradient(circle at 50% 30%, #4338ca 0%, #1e1b4b 30%, #581c87 60%, #b91c1c 85%, #d97706 100%)',
             }}
           >
-            {/* Isometric Cubes Pattern Background */}
+            {/* Background grid */}
             <div className="absolute inset-0 opacity-20 pointer-events-none bg-[radial-gradient(#ffffff_1.5px,transparent_1.5px)] [background-size:20px_20px]" />
 
             {/* Top Bar with Trophy count */}
             <div className="w-full flex justify-between items-center z-10">
               <span className="text-xs font-black text-white/90 bg-black/40 backdrop-blur px-3 py-1 rounded-full border border-white/20 flex items-center gap-1.5">
                 <Trophy className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                Trophies: {playerTrophies}
+                Trophies: {playerProfile.trophies}
               </span>
             </div>
 
@@ -840,9 +1059,8 @@ export default function App() {
               </div>
             </div>
 
-            {/* Bottom Publisher & Studio Branding (Voodoo & Tarboosh Games) */}
+            {/* Bottom Publisher & Studio Branding */}
             <div className="w-full flex justify-between items-end z-10 px-2 text-white/80">
-              {/* Voodoo Logo */}
               <div className="flex flex-col items-start">
                 <span className="text-xl font-black tracking-tighter text-white drop-shadow">
                   voodoo
@@ -852,7 +1070,6 @@ export default function App() {
                 </span>
               </div>
 
-              {/* Tarboosh Games Logo */}
               <div className="flex items-center gap-1.5">
                 <div className="w-6 h-6 rounded-md bg-red-600 border border-white/80 flex items-center justify-center text-xs shadow">
                   🛡️
@@ -870,106 +1087,234 @@ export default function App() {
           </div>
         )}
 
-      {/* 2. MATCH TOP HUD */}
-      {gameState !== 'splash' && (
-        <HeaderHUD
-          bluePercent={bluePercent}
-          redPercent={redPercent}
-          timeRemaining={timeRemaining}
-          currentLevel={currentLevel}
-          playerTrophies={playerTrophies}
-          isMuted={isMuted}
-          onToggleMute={() => {
-            const muted = sounds.toggleMute();
-            setIsMuted(muted);
-          }}
-          onOpenTechModal={() => setShowTechModal(true)}
-          onOpenUnityModal={() => setShowUnityModal(true)}
-        />
-      )}
+        {/* ======================================================== */}
+        {/* 2. MENU VIEWS (HOME, CARDS, SHOP, SPIN, SETTINGS)        */}
+        {/* ======================================================== */}
+        {gameState === 'menu' && (
+          <div className="w-full h-full flex flex-col justify-between overflow-hidden">
+            {/* View container */}
+            <div className="flex-1 w-full overflow-hidden">
+              {currentTab === 'battle' && (
+                <HomeBattleView
+                  playerProfile={playerProfile}
+                  currentLevel={currentLevel}
+                  selectedSectorIndex={currentLevelIndex}
+                  onSelectSector={(idx) => setCurrentLevelIndex(idx)}
+                  levels={LEVELS}
+                  activeDeck={activeDeck}
+                  chestSlots={chestSlots}
+                  onOpenChest={handleOpenChest}
+                  onStartUnlockChest={handleStartUnlockChest}
+                  onStartBattle={() => startLevel(currentLevelIndex)}
+                  onOpenDeckTab={() => setCurrentTab('cards')}
+                  onOpenShopTab={() => setCurrentTab('shop')}
+                  onOpenSpinTab={() => setCurrentTab('spin')}
+                  onOpenUnityModal={() => setShowUnityModal(true)}
+                  onOpenTechModal={() => setShowTechModal(true)}
+                />
+              )}
 
-      {/* 3. BATTLEFIELD CANVAS */}
-      <div className="flex-1 w-full flex items-center justify-center relative overflow-hidden">
-        <GameCanvas
-          grid={grid}
-          units={units}
-          projectiles={projectiles}
-          particles={particles}
-          floatingTexts={floatingTexts}
-          emotes={emotes}
-          draggedCard={draggedCard || selectedCard}
-          dragPos={dragPos}
-          onDeployCard={handleDeployCard}
-          isGameOver={gameState !== 'playing'}
-        />
+              {currentTab === 'cards' && (
+                <CardCollectionView
+                  inventory={inventory}
+                  activeDeck={activeDeck}
+                  playerCoins={playerProfile.coins}
+                  onUpgradeCard={handleUpgradeCard}
+                  onEquipCard={handleEquipCard}
+                />
+              )}
 
-        {/* Mascot Commander Tutorial bubble */}
-        {tutorialMessage && (
-          <CommanderTutorial
-            message={tutorialMessage}
-            onDismiss={() => setTutorialMessage(null)}
-            showHandHint={currentLevel.level === 1}
+              {currentTab === 'shop' && (
+                <ShopView
+                  playerCoins={playerProfile.coins}
+                  playerGems={playerProfile.gems}
+                  onAddCoins={(amount) =>
+                    setPlayerProfile((p) => ({ ...p, coins: p.coins + amount }))
+                  }
+                  onAddGems={(amount) =>
+                    setPlayerProfile((p) => ({ ...p, gems: p.gems + amount }))
+                  }
+                  onDeductGems={(amount) => {
+                    if (playerProfile.gems >= amount) {
+                      setPlayerProfile((p) => ({ ...p, gems: p.gems - amount }));
+                      return true;
+                    }
+                    return false;
+                  }}
+                  onOpenChestLoot={(tier) => {
+                    const coinBonus = tier === 'magical' ? 1500 : tier === 'gold' ? 500 : 150;
+                    const cardBonus = tier === 'magical' ? 50 : tier === 'gold' ? 25 : 10;
+                    setPlayerProfile((p) => ({ ...p, coins: p.coins + coinBonus }));
+                    const allTypes = Object.keys(inventory) as CardType[];
+                    const rand = allTypes[Math.floor(Math.random() * allTypes.length)];
+                    setInventory((inv) => ({
+                      ...inv,
+                      [rand]: { ...inv[rand], cards: inv[rand].cards + cardBonus },
+                    }));
+                    confetti({ particleCount: 75, spread: 70, origin: { y: 0.5 } });
+                  }}
+                />
+              )}
+
+              {currentTab === 'spin' && (
+                <DailySpinView
+                  playerCoins={playerProfile.coins}
+                  playerGems={playerProfile.gems}
+                  hasFreeSpin={hasFreeSpin}
+                  onClaimReward={handleClaimSpinReward}
+                />
+              )}
+
+              {currentTab === 'settings' && (
+                <SettingsView
+                  isMuted={isMuted}
+                  onToggleMute={() => {
+                    const muted = sounds.toggleMute();
+                    setIsMuted(muted);
+                  }}
+                  onOpenUnityModal={() => setShowUnityModal(true)}
+                  onOpenTechModal={() => setShowTechModal(true)}
+                  onResetTutorial={() => {
+                    setTutorialMessage(currentLevel.tutorialTip ?? 'Drag cards to conquer the red territory!');
+                    setCurrentTab('battle');
+                  }}
+                />
+              )}
+            </div>
+
+            {/* Bottom 5-Tab Navigation Bar */}
+            <BottomNavBar
+              currentTab={currentTab}
+              onSelectTab={setCurrentTab}
+              hasFreeSpin={hasFreeSpin}
+              upgradeableCardsCount={upgradeableCardsCount}
+            />
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* 3. IN-MATCH TACTICAL BATTLE ARENA (PLAYING STATE)        */}
+        {/* ======================================================== */}
+        {gameState !== 'splash' && gameState !== 'menu' && (
+          <>
+            {/* Header HUD */}
+            <HeaderHUD
+              bluePercent={bluePercent}
+              redPercent={redPercent}
+              timeRemaining={timeRemaining}
+              currentLevel={currentLevel}
+              playerTrophies={playerProfile.trophies}
+              isMuted={isMuted}
+              onToggleMute={() => {
+                const muted = sounds.toggleMute();
+                setIsMuted(muted);
+              }}
+              onOpenTechModal={() => setShowTechModal(true)}
+              onOpenUnityModal={() => setShowUnityModal(true)}
+            />
+
+            {/* Battlefield Canvas */}
+            <div className="flex-1 w-full flex items-center justify-center relative overflow-hidden">
+              <GameCanvas
+                grid={grid}
+                units={units}
+                projectiles={projectiles}
+                particles={particles}
+                floatingTexts={floatingTexts}
+                emotes={emotes}
+                draggedCard={draggedCard || selectedCard}
+                dragPos={dragPos}
+                onDeployCard={handleDeployCard}
+                isGameOver={gameState !== 'playing'}
+              />
+
+              {/* Mascot Commander Tutorial bubble */}
+              {tutorialMessage && (
+                <CommanderTutorial
+                  message={tutorialMessage}
+                  onDismiss={() => setTutorialMessage(null)}
+                  showHandHint={currentLevel.level === 1}
+                />
+              )}
+            </div>
+
+            {/* Deck & Energy Bottom HUD */}
+            <DeckHUD
+              energy={energy}
+              maxEnergy={maxEnergy}
+              hand={hand}
+              nextCard={nextCard}
+              selectedCard={selectedCard}
+              onSelectCard={setSelectedCard}
+              onDragStartCard={handleDragStartCard}
+              onSendEmote={handleSendEmote}
+              isGameOver={gameState !== 'playing'}
+            />
+          </>
+        )}
+
+        {/* ======================================================== */}
+        {/* 4. VICTORY POPUP MODAL                                  */}
+        {/* ======================================================== */}
+        {gameState === 'victory' && (
+          <VictoryModal
+            level={currentLevel.level}
+            timeBonus={timeRemaining}
+            rewardCubes={currentLevel.rewardCubes + Math.floor(timeRemaining * 4)}
+            rewardCoins={currentLevel.rewardCoins}
+            onNextLevel={handleNextLevel}
+            onReplayLevel={() => startLevel(currentLevelIndex)}
+            onReturnHome={handleReturnToHome}
           />
+        )}
+
+        {/* ======================================================== */}
+        {/* 5. DEFEAT POPUP MODAL                                    */}
+        {/* ======================================================== */}
+        {gameState === 'defeat' && (
+          <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
+            <div className="relative w-full max-w-sm bg-gradient-to-b from-slate-900 to-rose-950 rounded-3xl p-6 border-2 border-rose-500 shadow-2xl flex flex-col items-center text-center animate-in zoom-in-90">
+              <div className="w-16 h-16 rounded-2xl bg-rose-600 flex items-center justify-center text-3xl shadow-xl border-2 border-white mb-2">
+                💥
+              </div>
+              <h1 className="text-3xl font-black text-rose-400 mt-2">DEFEAT</h1>
+              <p className="text-xs text-slate-300 mt-1">
+                Red claimed {redPercent}% territory. Don't give up!
+              </p>
+              <div className="flex gap-2 w-full mt-5">
+                <button
+                  onClick={() => {
+                    setGameState('menu');
+                    setCurrentTab('battle');
+                  }}
+                  className="flex-1 py-3 px-4 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm border border-slate-700 cursor-pointer active:scale-95 transition flex items-center justify-center gap-1"
+                >
+                  <Home className="w-4 h-4" />
+                  Home
+                </button>
+                <button
+                  onClick={() => startLevel(currentLevelIndex)}
+                  className="flex-1 py-3 px-4 rounded-2xl bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-400 text-white font-black text-sm shadow-lg border-2 border-white cursor-pointer active:scale-95 transition flex items-center justify-center gap-1"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  Try Again
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
 
-      {/* 4. DECK & ENERGY BOTTOM HUD */}
-      {gameState !== 'splash' && (
-        <DeckHUD
-          energy={energy}
-          maxEnergy={maxEnergy}
-          hand={hand}
-          nextCard={nextCard}
-          selectedCard={selectedCard}
-          onSelectCard={setSelectedCard}
-          onDragStartCard={handleDragStartCard}
-          onSendEmote={handleSendEmote}
-          isGameOver={gameState !== 'playing'}
-        />
-      )}
-
-      {/* 5. VICTORY POPUP */}
-      {gameState === 'victory' && (
-        <VictoryModal
-          level={currentLevel.level}
-          timeBonus={timeRemaining}
-          rewardCubes={currentLevel.rewardCubes + Math.floor(timeRemaining * 4)}
-          rewardCoins={currentLevel.rewardCoins}
-          onNextLevel={handleNextLevel}
-          onReplayLevel={() => startLevel(currentLevelIndex)}
-        />
-      )}
-
-      {/* 6. DEFEAT POPUP */}
-      {gameState === 'defeat' && (
-        <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="relative w-full max-w-sm bg-gradient-to-b from-slate-900 to-rose-950 rounded-3xl p-6 border-2 border-rose-500 shadow-2xl flex flex-col items-center text-center animate-in zoom-in-90">
-            <div className="w-16 h-16 rounded-2xl bg-rose-600 flex items-center justify-center text-3xl shadow-xl border-2 border-white mb-2">
-              💥
-            </div>
-            <h1 className="text-3xl font-black text-rose-400 mt-2">DEFEAT</h1>
-            <p className="text-xs text-slate-300 mt-1">
-              Red claimed {redPercent}% territory. Don't give up!
-            </p>
-            <button
-              onClick={() => startLevel(currentLevelIndex)}
-              className="mt-5 w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-400 hover:to-red-500 text-white font-black text-base shadow-lg border-2 border-white cursor-pointer transition active:scale-95 flex items-center justify-center gap-2"
-            >
-              <RotateCcw className="w-5 h-5" />
-              TRY AGAIN
-            </button>
-          </div>
-        </div>
-      )}
-
-      </div>{/* End Mobile Portrait Shell */}
-
-      {/* 7. TECH STACK COMPARISON MODAL */}
+      {/* ======================================================== */}
+      {/* 6. TECH STACK GUIDE MODAL (Unity vs Godot vs Web)        */}
+      {/* ======================================================== */}
       {showTechModal && (
         <TechStackGuideModal onClose={() => setShowTechModal(false)} />
       )}
 
-      {/* 8. UNITY 3D BLUEPRINT & MASTER PROMPT MODAL */}
+      {/* ======================================================== */}
+      {/* 7. UNITY 3D BLUEPRINT & MASTER PROMPT MODAL              */}
+      {/* ======================================================== */}
       {showUnityModal && (
         <UnityRoadmapModal onClose={() => setShowUnityModal(false)} />
       )}

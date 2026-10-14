@@ -125,3 +125,44 @@ export interface LevelConfig {
   rewardCubes: number;
   rewardCoins: number;
 }
+
+export type NavTab = 'battle' | 'cards' | 'shop' | 'spin' | 'settings';
+
+export interface ChestSlot {
+  id: string;
+  name: string;
+  tier: 'wooden' | 'silver' | 'gold' | 'magical';
+  unlockDurationSeconds: number;
+  unlockStartedAt: number | null; // timestamp or null if locked
+  isOpened: boolean;
+  coinsReward: number;
+  gemsReward: number;
+  cardsReward: number;
+}
+
+export interface CardInventoryItem {
+  id: CardType;
+  level: number;
+  cards: number;
+  cardsRequired: number;
+  upgradeCost: number;
+}
+
+export interface SpinReward {
+  id: string;
+  type: 'coins' | 'gems' | 'cards' | 'chest';
+  amount: number;
+  label: string;
+  icon: string;
+  color: string;
+}
+
+export interface PlayerProfile {
+  name: string;
+  level: number;
+  exp: number;
+  maxExp: number;
+  trophies: number;
+  coins: number;
+  gems: number;
+}

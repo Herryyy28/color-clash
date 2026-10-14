@@ -207,6 +207,19 @@ class SoundEngine {
     osc.stop(t + 0.13);
   }
 
+  // Aliases for compatibility
+  public playSawWhir() {
+    this.playSawLaunch();
+  }
+
+  public playCardDeploy() {
+    this.playCardDrop();
+  }
+
+  public playUnitExplode() {
+    this.playExplosion();
+  }
+
   // Emote pop sound
   public playEmotePop() {
     if (this.isMuted) return;
@@ -286,6 +299,87 @@ class SoundEngine {
 
       osc.start(noteTime);
       osc.stop(noteTime + 0.25);
+    });
+  }
+
+  // UI button click
+  public playClick() {
+    if (this.isMuted) return;
+    this.initCtx();
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(600, t);
+    osc.frequency.exponentialRampToValueAtTime(400, t + 0.05);
+    gain.gain.setValueAtTime(0.15, t);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.05);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.06);
+  }
+
+  // Spin wheel tick
+  public playSpinTick() {
+    if (this.isMuted) return;
+    this.initCtx();
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(900 + Math.random() * 100, t);
+    gain.gain.setValueAtTime(0.12, t);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.03);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.035);
+  }
+
+  // Card upgrade chime
+  public playCardUpgrade() {
+    if (this.isMuted) return;
+    this.initCtx();
+    if (!this.ctx) return;
+    const notes = [330, 440, 554.37, 659.25, 880]; // A major arpeggio
+    const startTime = this.ctx.currentTime;
+    notes.forEach((freq, idx) => {
+      const osc = this.ctx!.createOscillator();
+      const gain = this.ctx!.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      const noteTime = startTime + idx * 0.08;
+      gain.gain.setValueAtTime(0.25, noteTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, noteTime + 0.3);
+      osc.connect(gain);
+      gain.connect(this.ctx!.destination);
+      osc.start(noteTime);
+      osc.stop(noteTime + 0.35);
+    });
+  }
+
+  // Chest open or reward claim
+  public playRewardClaim() {
+    if (this.isMuted) return;
+    this.initCtx();
+    if (!this.ctx) return;
+    const notes = [523.25, 659.25, 783.99, 1046.5]; // C major
+    const startTime = this.ctx.currentTime;
+    notes.forEach((freq, idx) => {
+      const osc = this.ctx!.createOscillator();
+      const gain = this.ctx!.createGain();
+      osc.type = 'triangle';
+      osc.frequency.value = freq;
+      const noteTime = startTime + idx * 0.07;
+      gain.gain.setValueAtTime(0.2, noteTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, noteTime + 0.25);
+      osc.connect(gain);
+      gain.connect(this.ctx!.destination);
+      osc.start(noteTime);
+      osc.stop(noteTime + 0.3);
     });
   }
 }
